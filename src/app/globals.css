@@ -1,0 +1,149 @@
+@import "tailwindcss";
+
+/* ================= BASE ================= */
+
+html {
+  scroll-behavior: smooth;
+}
+
+html, body {
+  overflow-x: hidden;
+}
+
+body {
+  overscroll-behavior: none;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter);
+  line-height: 1.9;
+}
+
+/* ================= FONTS ================= */
+
+:root {
+  --font-playfair: serif;
+  --font-inter: sans-serif;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-playfair);
+}
+
+h2 {
+  letter-spacing: 0.05em;
+}
+
+/* ================= THEME ================= */
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+/* ================= LUXURY EFFECTS ================= */
+
+.pink-glow {
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  background: radial-gradient(
+    circle,
+    rgba(236, 72, 153, 0.35) 0%,
+    rgba(236, 72, 153, 0.15) 40%,
+    transparent 70%
+  );
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+/* Section blending */
+.section-bg {
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.12),
+    rgba(0, 0, 0, 0.22)
+  );
+}
+
+/* ================= PAGE TRANSITIONS ================= */
+
+.page-hidden {
+  opacity: 0;
+  transform: translateY(28px);
+}
+
+.page-visible {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ================= GLOBAL GLASS ================= */
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  backdrop-filter: contrast(1.08) saturate(1.15);
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ================= MOBILE TYPOGRAPHY ================= */
+
+@media (max-width: 767px) {
+  h1 {
+    font-size: 2rem;
+    line-height: 1.25;
+  }
+
+  h2 {
+    font-size: 1.6rem;
+    line-height: 1.35;
+    letter-spacing: 0.04em;
+  }
+
+  p {
+    font-size: 0.95rem;
+    line-height: 1.7;
+  }
+}
+
+/* ================= MOBILE SPACING ================= */
+
+@media (max-width: 767px) {
+  .section-bg {
+    padding-top: 4rem;
+    padding-bottom: 4rem;
+  }
+}
+
+/* ================= MOBILE PINK GLOW ================= */
+
+@media (max-width: 767px) {
+  .pink-glow {
+    width: 260px;
+    height: 260px;
+    filter: blur(60px);
+    opacity: 0.7;
+  }
+}
+
+/* ================= TESTIMONIALS MOBILE ================= */
+
+@media (max-width: 767px) {
+  .testimonial-card {
+    max-width: 90%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
