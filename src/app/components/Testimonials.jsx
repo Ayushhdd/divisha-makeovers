@@ -66,21 +66,39 @@ export default function Testimonials() {
             boxShadow: "0 0 60px rgba(236,72,153,0.25)",
           }}
         >
-          {/* LEFT ARROW */}
-          <button
-            onClick={() => paginate(-1)}
-            className="absolute left-6 top-1/2 -translate-y-1/2 text-pink-400 text-2xl sm:text-3xl p-2 hover:scale-110 transition"
-          >
-            ‹
-          </button>
+         <button
+  onClick={() => paginate(-1)}
+  className="
+    absolute left-4 top-1/2 -translate-y-1/2
+    z-50
+    text-pink-400 text-3xl
+    p-3
+    touch-manipulation
+    pointer-events-auto
+    md:left-6 md:text-3xl
+    hover:scale-110 transition
+  "
+>
+  ‹
+</button>
 
-          {/* RIGHT ARROW */}
+
           <button
-            onClick={() => paginate(1)}
-            className="absolute right-6 top-1/2 -translate-y-1/2 text-pink-400 text-3xl hover:scale-110 transition"
-          >
-            ›
-          </button>
+  onClick={() => paginate(1)}
+  className="
+    absolute right-4 top-1/2 -translate-y-1/2
+    z-50
+    text-pink-400 text-3xl
+    p-3
+    touch-manipulation
+    pointer-events-auto
+    md:right-6 md:text-3xl
+    hover:scale-110 transition
+  "
+>
+  ›
+</button>
+
 
           {/* CONTENT */}
           <div className="relative max-w-3xl mx-auto text-center">
@@ -91,7 +109,9 @@ export default function Testimonials() {
             </h2>
 
             <AnimatePresence mode="wait" custom={direction}>
-              <motion.div className="mx-auto max-w-full sm:max-w-3xl"
+             <motion.div
+  className="mx-auto max-w-full sm:max-w-3xl pointer-events-none md:pointer-events-auto"
+
 
                 key={index}
                 custom={direction}
