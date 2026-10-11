@@ -1,5 +1,6 @@
+import 'dotenv/config';
 import express from 'express';
-import dotenv from 'dotenv';
+import mongoose from 'mongoose';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -22,13 +23,12 @@ import User from './models/User.js';
 import Service from './models/Service.js';
 import AdminSettings from './models/AdminSettings.js';
 import { seedServiceCatalog } from './data/serviceCatalog.js';
-
-dotenv.config();
+import { serveStoredImage } from './utils/imageStorage.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-connectDB();
+await connectDB();
 startReminderJob();
 const isCleanupEnabled =
   process.env.ENABLE_PAYMENT_SCREENSHOT_CLEANUP !== 'false' &&
@@ -57,7 +57,6 @@ const seedAdmin = async () => {
       });
       console.log('✓ Admin created successfully');
       console.log(`  Email: ${process.env.ADMIN_EMAIL || 'admin@divishamakeovers.com'}`);
-      console.log(`  Password: ${process.env.ADMIN_PASSWORD || 'ChangeMe@123'}`);
     } else {
       console.log('✓ Admin already exists');
     }
@@ -70,7 +69,10 @@ const seedAdmin = async () => {
 
     const settings = await AdminSettings.findOne();
     if (!settings) {
-      await AdminSettings.create({});
+      await AdminSettings.create({
+        upiId: process.env.INITIAL_UPI_ID || '',
+        businessEmail: process.env.INITIAL_BUSINESS_EMAIL || '',
+      });
       console.log('✓ Admin settings initialized');
     }
   } catch (error) {
@@ -78,10 +80,10 @@ const seedAdmin = async () => {
   }
 };
 
-seedAdmin();
+await seedAdmin();
 
 const app = express();
-// Railway terminates the public proxy before this process receives the request.
+// The hosting provider terminates HTTPS before forwarding the request.
 app.set('trust proxy', 1);
 const localOrigins = [
   'http://localhost:3000',
@@ -126,10 +128,16 @@ app.use(express.urlencoded({ extended: true }));
 const uploadDir = process.env.UPLOAD_DIR
   ? path.resolve(process.env.UPLOAD_DIR)
   : path.join(__dirname, 'uploads');
+app.get('/uploads/:filename', serveStoredImage);
 app.use('/uploads', express.static(uploadDir));
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', app: 'Divisha Makeovers API' });
+  const ready = mongoose.connection.readyState === 1;
+  res.status(ready ? 200 : 503).json({
+    status: ready ? 'ok' : 'unavailable',
+    app: 'Divisha Makeovers API',
+    database: ready ? 'connected' : 'disconnected',
+  });
 });
 
 app.use('/api/auth', authRoutes);
@@ -142,7 +150,7 @@ app.use(notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
 

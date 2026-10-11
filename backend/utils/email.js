@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { createHmac } from 'node:crypto';
 
 const createTransporter = () => {
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
@@ -18,6 +19,29 @@ const createTransporter = () => {
 };
 
 export const sendEmail = async ({ to, subject, html }) => {
+  if (process.env.EMAIL_RELAY_URL && process.env.EMAIL_RELAY_SECRET) {
+    try {
+      const body = JSON.stringify({ to, subject, html });
+      const timestamp = String(Date.now());
+      const signature = createHmac('sha256', process.env.EMAIL_RELAY_SECRET)
+        .update(`${timestamp}.${body}`).digest('hex');
+      const response = await fetch(process.env.EMAIL_RELAY_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Email-Timestamp': timestamp,
+          'X-Email-Signature': signature,
+        },
+        body,
+        signal: AbortSignal.timeout(25000),
+      });
+      if (!response.ok) throw new Error(`Email relay returned ${response.status}`);
+      return { success: true };
+    } catch (error) {
+      console.error('Email relay failed:', error.message);
+      return { success: false, error: 'Email could not be sent. Please try again later.' };
+    }
+  }
   const transporter = createTransporter();
   if (!transporter) {
     console.error(`[Email not sent - SMTP is incomplete] To: ${to}, Subject: ${subject}`);

@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
+import { persistImage } from '../utils/imageStorage.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,6 +48,7 @@ export const compressImage = async (filePath) => {
     .toFile(outputPath);
   fs.unlinkSync(filePath);
   fs.renameSync(outputPath, filePath);
+  await persistImage(filePath);
   return filePath;
 };
 

@@ -3,6 +3,7 @@ import path from 'path';
 import Payment from '../models/Payment.js';
 import Appointment from '../models/Appointment.js';
 import { uploadDir } from '../middleware/upload.js';
+import { removeStoredImage } from './imageStorage.js';
 
 const retentionDays = () => {
   const configuredDays = Number.parseInt(process.env.PAYMENT_SCREENSHOT_RETENTION_DAYS, 10);
@@ -28,6 +29,7 @@ export const cleanupPaymentScreenshots = async () => {
       // path outside the controlled uploads directory.
       if (!filename.startsWith('http') && path.basename(filename) === filename) {
         try {
+          await removeStoredImage(filename);
           await fs.unlink(path.join(uploadDir, filename));
         } catch (error) {
           if (error.code !== 'ENOENT') {
