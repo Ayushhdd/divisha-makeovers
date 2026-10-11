@@ -6,8 +6,8 @@ export const ensureAdminAccount = async () => {
   const email = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
   const password = process.env.ADMIN_PASSWORD;
   if (!/^\S+@\S+\.\S+$/.test(email) || typeof password !== 'string' ||
-      password.length < 15 || Buffer.byteLength(password, 'utf8') > 72) {
-    throw new Error('A new database requires ADMIN_EMAIL and a unique ADMIN_PASSWORD of at least 15 characters (maximum 72 UTF-8 bytes). No default admin login is available.');
+      password.length < 11 || Buffer.byteLength(password, 'utf8') > 72) {
+    throw new Error('A new database requires ADMIN_EMAIL and a unique ADMIN_PASSWORD of at least 11 characters (maximum 72 UTF-8 bytes). No default admin login is available.');
   }
   await User.create({
     fullName: 'Admin', email, mobile: '9999999999', password, role: 'admin',

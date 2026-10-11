@@ -34,7 +34,7 @@ const start = async () => {
       ...process.env,
       MONGODB_URI: mongo.getUri('render_migration_test'), PORT: String(port),
       NODE_ENV: 'test', JWT_SECRET: 'isolated-migration-test-secret',
-      ADMIN_EMAIL: 'admin@example.invalid', ADMIN_PASSWORD: 'TestPassword123!',
+      ADMIN_EMAIL: 'admin@example.invalid', ADMIN_PASSWORD: 'TestPass12!',
       UPLOAD_STORAGE: 'mongodb', UPLOAD_DIR: staging, API_URL: base,
       CLIENT_URL: 'https://divishamakeovers.com',
       EMAIL_RELAY_URL: '', EMAIL_RELAY_SECRET: '', SMTP_HOST: '', SMTP_USER: '', SMTP_PASS: '',
@@ -64,11 +64,11 @@ try {
   const health = await request('/health');
   assert.equal(health.database, 'connected');
   const admin = await request('/auth/login', '', {
-    email: 'admin@example.invalid', password: 'TestPassword123!',
+    email: 'admin@example.invalid', password: 'TestPass12!',
   }, 'POST');
   const customer = await request('/auth/register', '', {
     fullName: 'Migration Test Customer', email: 'customer@example.invalid', mobile: '9999999998',
-    password: 'TestPassword123!',
+    password: 'TestPass12!',
     address: { line1: 'Test', district: 'Test', state: 'Test', postalCode: '144001' },
   }, 'POST', 201);
   const services = await request('/services');
@@ -132,29 +132,29 @@ try {
   const qr = await request('/admin/settings', admin.token, qrForm, 'PUT');
   assert.equal((await fetch(qr.qrCodeUrl)).status, 200);
   const secondAdminSession = await request('/auth/login', '', {
-    email: 'admin@example.invalid', password: 'TestPassword123!', rememberMe: true,
+    email: 'admin@example.invalid', password: 'TestPass12!', rememberMe: true,
   }, 'POST');
   await request('/auth/change-password', admin.token, {
-    currentPassword: 'WrongPassword123!', newPassword: 'NewTestPassword456!',
+    currentPassword: 'WrongPassword123!', newPassword: 'NewPass456!',
   }, 'PUT', 400);
   await request('/auth/change-password', admin.token, {
-    currentPassword: 'TestPassword123!', newPassword: 'short',
+    currentPassword: 'TestPass12!', newPassword: '1234567890',
   }, 'PUT', 400);
   await request('/auth/change-password', admin.token, {
-    currentPassword: 'TestPassword123!', newPassword: 'a'.repeat(73),
+    currentPassword: 'TestPass12!', newPassword: 'a'.repeat(73),
   }, 'PUT', 400);
   await request('/auth/change-password', admin.token, {
-    currentPassword: 'TestPassword123!', newPassword: 'NewTestPassword456!', newEmail: 'customer@example.invalid',
+    currentPassword: 'TestPass12!', newPassword: 'NewPass456!', newEmail: 'customer@example.invalid',
   }, 'PUT', 400);
   await request('/auth/change-password', admin.token, {
-    currentPassword: 'TestPassword123!', newPassword: 'NewTestPassword456!', newEmail: 'private-admin@example.invalid',
+    currentPassword: 'TestPass12!', newPassword: 'NewPass456!', newEmail: 'private-admin@example.invalid',
   }, 'PUT');
   await request('/auth/profile', admin.token, undefined, 'GET', 401);
   await request('/admin/dashboard', secondAdminSession.token, undefined, 'GET', 401);
-  await request('/auth/login', '', { email: 'admin@example.invalid', password: 'TestPassword123!' }, 'POST', 401);
-  await request('/auth/login', '', { email: 'private-admin@example.invalid', password: 'TestPassword123!' }, 'POST', 401);
+  await request('/auth/login', '', { email: 'admin@example.invalid', password: 'TestPass12!' }, 'POST', 401);
+  await request('/auth/login', '', { email: 'private-admin@example.invalid', password: 'TestPass12!' }, 'POST', 401);
   let updatedAdmin = await request('/auth/login', '', {
-    email: 'private-admin@example.invalid', password: 'NewTestPassword456!',
+    email: 'private-admin@example.invalid', password: 'NewPass456!',
   }, 'POST');
   const profile = await request('/auth/profile', updatedAdmin.token);
   assert.equal(profile.password, undefined);
@@ -163,23 +163,23 @@ try {
   const users = mongoose.connection.collection('users');
   let storedAdmin = await users.findOne({ _id: new mongoose.Types.ObjectId(admin._id) });
   assert.match(storedAdmin.password, /^\$2[aby]\$12\$/);
-  assert.notEqual(storedAdmin.password, 'NewTestPassword456!');
+  assert.notEqual(storedAdmin.password, 'NewPass456!');
   // Supply a test-only OTP directly in the isolated database; no email is sent.
   await users.updateOne({ _id: storedAdmin._id }, { $set: {
     otp: createHash('sha256').update('123456:private-admin@example.invalid').digest('hex'),
     otpExpires: new Date(Date.now() + 60000), otpAttempts: 0,
   } });
   await request('/auth/reset-password', '', {
-    email: 'private-admin@example.invalid', otp: '123456', newPassword: 'ResetTestPassword789!',
+    email: 'private-admin@example.invalid', otp: '123456', newPassword: 'ResetPass9!',
   }, 'POST');
   await request('/auth/profile', updatedAdmin.token, undefined, 'GET', 401);
   updatedAdmin = await request('/auth/login', '', {
-    email: 'private-admin@example.invalid', password: 'ResetTestPassword789!',
+    email: 'private-admin@example.invalid', password: 'ResetPass9!',
   }, 'POST');
   // A redeploy must not restore the old environment bootstrap credentials.
   await stop();
   await start();
-  await request('/auth/login', '', { email: 'admin@example.invalid', password: 'TestPassword123!' }, 'POST', 401);
+  await request('/auth/login', '', { email: 'admin@example.invalid', password: 'TestPass12!' }, 'POST', 401);
   await request('/admin/dashboard', updatedAdmin.token);
   const { ensureAdminAccount } = await import('../utils/adminBootstrap.js');
   const bootstrapAdmin = await users.findOne({ role: 'admin' });

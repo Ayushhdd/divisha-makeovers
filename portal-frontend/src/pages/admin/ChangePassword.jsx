@@ -40,7 +40,7 @@ export default function ChangePassword() {
   return (
     <div className="max-w-md space-y-4 animate-fade-in">
       <h1 className="font-display text-2xl font-bold">Change Admin Login</h1>
-      <p className="text-sm text-gray-600">Choose a unique password of at least 15 characters. Updating your login signs out every session, including this one.</p>
+      <p className="text-sm text-gray-600">Choose a unique password of at least 11 characters. Updating your login signs out every session, including this one.</p>
       {error && <Alert message={error} onClose={() => setError('')} />}
 
       <form onSubmit={handleSubmit} className="card space-y-4">
@@ -57,7 +57,7 @@ export default function ChangePassword() {
         </div>
         <div>
           <label className="label" htmlFor="new-password">New Password</label>
-          <input id="new-password" type="password" autoComplete="new-password" required minLength="15" maxLength="72" className="input-field" value={form.newPassword}
+          <input id="new-password" type="password" autoComplete="new-password" required minLength="11" maxLength="72" className="input-field" value={form.newPassword}
             onChange={(e) => setForm({ ...form, newPassword: e.target.value })} />
         </div>
         <div>

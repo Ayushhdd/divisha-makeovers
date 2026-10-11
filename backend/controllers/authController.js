@@ -8,7 +8,7 @@ const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
 const hashOTP = (otp, email) =>
   crypto.createHash('sha256').update(`${otp}:${normalizeEmail(email)}`).digest('hex');
 const passwordError = (password, role) => {
-  const minimum = role === 'admin' ? 15 : 6;
+  const minimum = role === 'admin' ? 11 : 6;
   return typeof password !== 'string' || password.length < minimum || Buffer.byteLength(password, 'utf8') > 72
     ? `Use a password of at least ${minimum} characters and no more than 72 UTF-8 bytes.` : '';
 };
