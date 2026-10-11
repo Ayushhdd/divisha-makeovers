@@ -5,9 +5,14 @@
   "scripts": {
     "dev": "node scripts/dev-local.mjs",
     "dev:site": "next dev",
+    "predev:site": "npm run prepare:images",
     "dev:all": "node scripts/dev-local.mjs",
     "build": "npm run build:portal && npm run build:site",
     "build:site": "next build",
+    "prebuild:site": "npm run prepare:images",
+    "prepare:images": "node scripts/prepare-site-images.mjs",
+    "lint": "eslint src scripts portal-frontend/src backend --no-warn-ignored",
+    "test": "node scripts/test-email-relay.mjs && npm --prefix portal-frontend run test:auth && npm --prefix backend run test:migration",
     "start": "next start",
     "dev:backend": "npm --prefix backend run dev",
     "start:backend": "npm --prefix backend start",
@@ -20,20 +25,22 @@
   "dependencies": {
     "framer-motion": "^12.23.26",
     "lucide-react": "^0.562.0",
-    "next": "^16.2.10",
-    "nodemailer": "^9.0.0",
+    "next": "16.4.0",
+    "nodemailer": "10.1.0",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "eslint": "^9",
-    "eslint-config-next": "^16.2.10",
+    "eslint-config-next": "16.4.0",
+    "sharp": "0.35.5",
     "tailwindcss": "^4"
   },
   "overrides": {
     "next": {
-      "postcss": "8.5.10"
-    }
+      "postcss": "^8.5.23"
+    },
+    "sharp": "$sharp"
   }
 }

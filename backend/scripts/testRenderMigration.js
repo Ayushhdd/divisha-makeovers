@@ -126,6 +126,11 @@ try {
   const legacyBooking = await request('/appointments', customer.token, { ...quantityBody, serviceQuantities: undefined }, 'POST', 201);
   assert.equal(legacyBooking.services[0].quantity, 1);
   assert.equal(legacyBooking.totalAmount, engagement.price);
+  const daily = await request('/appointments/schedule?date=2099-10-12', admin.token);
+  assert.ok(daily.some(appointment => appointment._id === legacyBooking._id), 'Daily lookup must use the same midnight as booking creation');
+  const filtered = await request('/appointments/admin/all?date=2099-10-12', admin.token);
+  assert.ok(filtered.some(appointment => appointment._id === legacyBooking._id));
+  await request('/appointments/schedule?date=invalid', admin.token, undefined, 'GET', 400);
   const screenshot = await sharp({ create: {
     width: 100, height: 100, channels: 3, background: '#336699',
   } }).png().toBuffer();

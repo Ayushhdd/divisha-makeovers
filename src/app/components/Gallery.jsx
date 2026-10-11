@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import { X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLockedBodyScroll } from "@/app/hooks/useLockedBodyScroll";
 
@@ -34,6 +34,14 @@ export default function Gallery() {
 
   useLockedBodyScroll(Boolean(selectedImage));
 
+  const closeImage = useCallback(() => {
+    setSelectedIndex(null);
+    setZoom(1);
+    setDragY(0);
+    touchStartY.current = null;
+    pinchStartDistance.current = null;
+  }, []);
+
   useEffect(() => {
     if (!selectedImage) return;
 
@@ -43,7 +51,7 @@ export default function Gallery() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedImage]);
+  }, [selectedImage, closeImage]);
 
   const openImage = (index) => {
     if (
@@ -55,14 +63,6 @@ export default function Gallery() {
 
     setSelectedIndex(index);
     setZoom(1);
-  };
-
-  const closeImage = () => {
-    setSelectedIndex(null);
-    setZoom(1);
-    setDragY(0);
-    touchStartY.current = null;
-    pinchStartDistance.current = null;
   };
 
   const getTouchDistance = (touches) => {

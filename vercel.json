@@ -1,5 +1,5 @@
 {
-  "installCommand": "npm install && npm --prefix portal-frontend install",
+  "installCommand": "npm ci && npm --prefix portal-frontend ci",
   "buildCommand": "npm run build",
   "headers": [
     {

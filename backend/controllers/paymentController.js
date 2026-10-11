@@ -60,7 +60,6 @@ export const verifyPayment = async (req, res) => {
     return res.status(409).json({ message: 'This payment is not linked to a booking' });
   }
 
-  console.log(`[Payment Verification] Payment ID: ${payment._id}, Status: ${newStatus}, Amount: ${payment.amount}`);
 
   // Update appointment status based on payment verification
   if (newStatus === 'verified') {
@@ -74,7 +73,6 @@ export const verifyPayment = async (req, res) => {
     );
     payment.appointment.status = 'confirmed';
     await payment.appointment.save();
-    console.log(`[Appointment Confirmed] Reference: ${payment.appointment.bookingReference} after payment verification`);
 
     // A notification failure must not turn a successful payment approval into
     // an error for the owner after the payment and booking have been saved.
@@ -89,7 +87,6 @@ export const verifyPayment = async (req, res) => {
   } else if (newStatus === 'rejected') {
     payment.appointment.status = 'payment_rejected';
     await payment.appointment.save();
-    console.log(`[Appointment Payment Rejected] Reference: ${payment.appointment.bookingReference}`);
 
     void notifyCustomer({
       customerId: payment.customer,

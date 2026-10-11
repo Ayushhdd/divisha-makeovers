@@ -7,6 +7,10 @@ const backendApiUrl = (process.env.BACKEND_API_URL || "http://localhost:5000/api
 const nextConfig = {
   compress: true,
   poweredByHeader: false,
+  // These files are needed only at build time or run separately on Render.
+  outputFileTracingExcludes: {
+    '/*': ['./assets/site-images/**/*', './backend/**/*', './.local-logs/**/*', './portal-frontend/**/*'],
+  },
   async rewrites() {
     return [
       { source: "/backend-api/:path*", destination: `${backendApiUrl}/:path*` },

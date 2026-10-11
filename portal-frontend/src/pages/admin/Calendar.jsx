@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import api from '../../api/axios';
 import { STATUS_COLORS, STATUS_LABELS } from '../../utils/helpers';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import Alert from '../../components/ui/Alert';
 
 export default function AdminCalendar() {
   const now = new Date();
@@ -11,28 +12,39 @@ export default function AdminCalendar() {
   const [calendar, setCalendar] = useState({});
   const [dailySchedule, setDailySchedule] = useState([]);
   const [selectedDate, setSelectedDate] = useState(now.toISOString().slice(0, 10));
-  const [loading, setLoading] = useState(true);
+  const [loadedKey, setLoadedKey] = useState('');
+  const [error, setError] = useState('');
+  const requestKey = view === 'month' ? `month:${year}:${month}` : `daily:${selectedDate}`;
+  const loading = loadedKey !== requestKey;
 
   useEffect(() => {
-    setLoading(true);
-    if (view === 'month') {
-      api.get('/appointments/calendar', { params: { month, year } }).then(({ data }) => {
-        setCalendar(data);
-        setLoading(false);
-      });
-    } else {
-      api.get('/appointments/schedule', { params: { date: selectedDate } }).then(({ data }) => {
-        setDailySchedule(data);
-        setLoading(false);
-      });
-    }
-  }, [month, year, view, selectedDate]);
+    const controller = new AbortController();
+    const monthly = view === 'month';
+    api.get(monthly ? '/appointments/calendar' : '/appointments/schedule', {
+      params: monthly ? { month, year } : { date: selectedDate },
+      signal: controller.signal,
+    }).then(({ data }) => {
+      if (controller.signal.aborted) return;
+      if (monthly) setCalendar(data);
+      else setDailySchedule(data);
+      setError('');
+    }).catch(err => {
+      if (controller.signal.aborted) return;
+      setCalendar({});
+      setDailySchedule([]);
+      setError(err.response?.data?.message || 'Could not load the calendar. Please refresh to try again.');
+    }).finally(() => {
+      if (!controller.signal.aborted) setLoadedKey(requestKey);
+    });
+    return () => controller.abort();
+  }, [month, year, view, selectedDate, requestKey]);
 
   const daysInMonth = new Date(year, month, 0).getDate();
   const firstDay = new Date(year, month - 1, 1).getDay();
 
   return (
     <div className="space-y-4 animate-fade-in">
+      {!loading && error && <Alert type="error" message={error} />}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <h1 className="font-display text-2xl font-bold">Calendar</h1>
         <div className="flex gap-2">

@@ -6,6 +6,9 @@ export default function useUpiPaymentRequest(settings, amount, reference = '') {
   const paymentAmount = Number(amount);
   const request = useMemo(() => buildUpiPaymentRequest({
     settings, amount: paymentAmount, reference, transactionReference: createUpiReference(),
+    // A manual refresh must create a new bank transaction reference even when
+    // the recipient, amount and booking have stayed the same.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [settings, paymentAmount, reference, attempt]);
   return { ...request, refreshRequest };
 }

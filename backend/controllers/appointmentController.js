@@ -345,7 +345,8 @@ export const getAllAppointments = async (req, res) => {
   const filter = {};
 
   if (date) {
-    const d = new Date(date);
+    const d = parseAppointmentDate(date);
+    if (!d) return res.status(400).json({ message: 'Invalid appointment date' });
     const next = new Date(d);
     next.setDate(next.getDate() + 1);
     filter.appointmentDate = { $gte: d, $lt: next };
@@ -493,7 +494,8 @@ export const getCalendarView = async (req, res) => {
 
 export const getDailySchedule = async (req, res) => {
   const { date } = req.query;
-  const d = new Date(date);
+  const d = parseAppointmentDate(date);
+  if (!d) return res.status(400).json({ message: 'Invalid appointment date' });
   const next = new Date(d);
   next.setDate(next.getDate() + 1);
 

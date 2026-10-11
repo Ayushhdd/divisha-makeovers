@@ -215,9 +215,9 @@ export default function Navbar() {
                 </div>
 
                 <nav className="flex flex-col gap-8 uppercase tracking-[0.3em] text-sm">
-                  <a onClick={() => setMobileOpen(false)} href="/">Home</a>
-                  <a onClick={() => setMobileOpen(false)} href="/#about">About</a>
-                  <a onClick={() => setMobileOpen(false)} href="/#gallery">Gallery</a>
+                  <Link onClick={() => setMobileOpen(false)} href="/">Home</Link>
+                  <Link onClick={() => setMobileOpen(false)} href="/#about">About</Link>
+                  <Link onClick={() => setMobileOpen(false)} href="/#gallery">Gallery</Link>
                   <a
                     onClick={() => setMobileOpen(false)}
                     href={dashboardHref}
@@ -241,13 +241,13 @@ export default function Navbar() {
                     ))}
                   </div>
 
-                  <a
+                  <Link
                     href="/#contact"
                     onClick={() => setMobileOpen(false)}
                     className="mt-10 inline-flex justify-center px-6 py-3 rounded-full border border-white/40 tracking-[0.35em]"
                   >
                     Book Now
-                  </a>
+                  </Link>
                 </nav>
               </div>
             </motion.div>

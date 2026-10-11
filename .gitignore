@@ -20,6 +20,24 @@
 # production
 /build
 /public/portal/
+# Website images are generated from the preserved originals in assets/site-images.
+/public/about/
+/public/airbrush/
+/public/bridal-bg/
+/public/bridal-prep/
+/public/classic/
+/public/engagement-bg/
+/public/gallery/
+/public/hd/
+/public/hover/
+/public/image-hero/
+/public/logo/
+/public/nails/
+/public/nails-bg/
+/public/party/
+/public/party-bg/
+/public/signature-airbrush/
+/public/signature-hd/
 
 # misc
 .DS_Store
