@@ -73,6 +73,8 @@ Default local URLs:
 
 ## Backend API
 
+See [ADMIN-LOGIN.md](ADMIN-LOGIN.md) for private admin email/password changes and installment receipts. Admin bootstrap requires explicitly configured credentials; the repository contains no default admin login. Password changes and OTP resets invalidate all of the account's previous sessions.
+
 Backend docs are in:
 
 - `backend/API.md`

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { mkdtemp, readdir, rm } from 'node:fs/promises';
@@ -104,15 +105,25 @@ try {
   assert.equal(receipt.appointment.advancePaid, 1);
   assert.equal(receipt.appointment.remainingBalance, booking.totalAmount - 1);
   assert.equal(receipt.appointment.status, 'confirmed');
+  const splitForm = new FormData();
+  splitForm.set('appointmentId', booking._id);
+  splitForm.set('amount', '2');
+  splitForm.set('screenshot', new Blob([screenshot], { type: 'image/png' }), 'installment.png');
+  const installment = await request('/payments', customer.token, splitForm, 'POST', 201);
+  await request(`/payments/${installment._id}/verify`, admin.token, { status: 'verified' }, 'PUT');
+  const splitReceipt = await request(`/appointments/${booking._id}/receipt`, customer.token);
+  assert.equal(splitReceipt.appointment.advancePaid, 3);
+  assert.equal(splitReceipt.appointment.remainingBalance, booking.totalAmount - 3);
+  assert.equal(splitReceipt.payments.length, 2);
   const balanceForm = new FormData();
   balanceForm.set('appointmentId', booking._id);
-  balanceForm.set('amount', String(booking.totalAmount - 1));
+  balanceForm.set('amount', String(booking.totalAmount - 3));
   balanceForm.set('screenshot', new Blob([screenshot], { type: 'image/png' }), 'balance.png');
   const balance = await request('/payments', customer.token, balanceForm, 'POST', 201);
   await request(`/payments/${balance._id}/verify`, admin.token, { status: 'verified' }, 'PUT');
   const paid = await request(`/appointments/${booking._id}/receipt`, customer.token);
   assert.equal(paid.appointment.remainingBalance, 0);
-  assert.equal(paid.payments.length, 2);
+  assert.equal(paid.payments.length, 3);
   const cors = await fetch(`${base}/api/health`, { headers: { Origin: 'https://divishamakeovers.com' } });
   assert.equal(cors.headers.get('access-control-allow-origin'), 'https://divishamakeovers.com');
   await mongoose.connect(mongo.getUri('render_migration_test'));
@@ -120,7 +131,71 @@ try {
   qrForm.set('qrCode', new Blob([screenshot], { type: 'image/png' }), 'qr.png');
   const qr = await request('/admin/settings', admin.token, qrForm, 'PUT');
   assert.equal((await fetch(qr.qrCodeUrl)).status, 200);
-  console.log('PASS: health, registration, login, services, booking, persistent screenshots after restart, payment authorization, duplicate approval prevention, advance and balance payment, receipts, CORS and QR upload.');
+  const secondAdminSession = await request('/auth/login', '', {
+    email: 'admin@example.invalid', password: 'TestPassword123!', rememberMe: true,
+  }, 'POST');
+  await request('/auth/change-password', admin.token, {
+    currentPassword: 'WrongPassword123!', newPassword: 'NewTestPassword456!',
+  }, 'PUT', 400);
+  await request('/auth/change-password', admin.token, {
+    currentPassword: 'TestPassword123!', newPassword: 'short',
+  }, 'PUT', 400);
+  await request('/auth/change-password', admin.token, {
+    currentPassword: 'TestPassword123!', newPassword: 'a'.repeat(73),
+  }, 'PUT', 400);
+  await request('/auth/change-password', admin.token, {
+    currentPassword: 'TestPassword123!', newPassword: 'NewTestPassword456!', newEmail: 'customer@example.invalid',
+  }, 'PUT', 400);
+  await request('/auth/change-password', admin.token, {
+    currentPassword: 'TestPassword123!', newPassword: 'NewTestPassword456!', newEmail: 'private-admin@example.invalid',
+  }, 'PUT');
+  await request('/auth/profile', admin.token, undefined, 'GET', 401);
+  await request('/admin/dashboard', secondAdminSession.token, undefined, 'GET', 401);
+  await request('/auth/login', '', { email: 'admin@example.invalid', password: 'TestPassword123!' }, 'POST', 401);
+  await request('/auth/login', '', { email: 'private-admin@example.invalid', password: 'TestPassword123!' }, 'POST', 401);
+  let updatedAdmin = await request('/auth/login', '', {
+    email: 'private-admin@example.invalid', password: 'NewTestPassword456!',
+  }, 'POST');
+  const profile = await request('/auth/profile', updatedAdmin.token);
+  assert.equal(profile.password, undefined);
+  assert.equal(profile.sessionVersion, undefined);
+  assert.equal(profile.email, 'private-admin@example.invalid');
+  const users = mongoose.connection.collection('users');
+  let storedAdmin = await users.findOne({ _id: new mongoose.Types.ObjectId(admin._id) });
+  assert.match(storedAdmin.password, /^\$2[aby]\$12\$/);
+  assert.notEqual(storedAdmin.password, 'NewTestPassword456!');
+  // Supply a test-only OTP directly in the isolated database; no email is sent.
+  await users.updateOne({ _id: storedAdmin._id }, { $set: {
+    otp: createHash('sha256').update('123456:private-admin@example.invalid').digest('hex'),
+    otpExpires: new Date(Date.now() + 60000), otpAttempts: 0,
+  } });
+  await request('/auth/reset-password', '', {
+    email: 'private-admin@example.invalid', otp: '123456', newPassword: 'ResetTestPassword789!',
+  }, 'POST');
+  await request('/auth/profile', updatedAdmin.token, undefined, 'GET', 401);
+  updatedAdmin = await request('/auth/login', '', {
+    email: 'private-admin@example.invalid', password: 'ResetTestPassword789!',
+  }, 'POST');
+  // A redeploy must not restore the old environment bootstrap credentials.
+  await stop();
+  await start();
+  await request('/auth/login', '', { email: 'admin@example.invalid', password: 'TestPassword123!' }, 'POST', 401);
+  await request('/admin/dashboard', updatedAdmin.token);
+  const { ensureAdminAccount } = await import('../utils/adminBootstrap.js');
+  const bootstrapAdmin = await users.findOne({ role: 'admin' });
+  await users.deleteOne({ _id: bootstrapAdmin._id });
+  const savedEmail = process.env.ADMIN_EMAIL;
+  const savedPassword = process.env.ADMIN_PASSWORD;
+  delete process.env.ADMIN_EMAIL;
+  delete process.env.ADMIN_PASSWORD;
+  try {
+    await assert.rejects(ensureAdminAccount(), /No default admin login/);
+    assert.equal(await users.countDocuments({ role: 'admin' }), 0);
+  } finally {
+    if (savedEmail !== undefined) process.env.ADMIN_EMAIL = savedEmail;
+    if (savedPassword !== undefined) process.env.ADMIN_PASSWORD = savedPassword;
+  }
+  console.log('PASS: migration, three-part payments and receipts, password/email changes, session revocation, password hashing, OTP reset, restart without restoring bootstrap login, and no default admin account.');
 } finally {
   await stop();
   await mongoose.disconnect();

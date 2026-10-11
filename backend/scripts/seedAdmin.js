@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import User from '../models/User.js';
+import { ensureAdminAccount } from '../utils/adminBootstrap.js';
 import Service from '../models/Service.js';
 import AdminSettings from '../models/AdminSettings.js';
 import connectDB from '../config/db.js';
@@ -10,25 +10,7 @@ dotenv.config();
 const seedAdmin = async () => {
   await connectDB();
 
-  const adminExists = await User.findOne({ role: 'admin' });
-  if (!adminExists) {
-    await User.create({
-      fullName: 'Admin',
-      email: process.env.ADMIN_EMAIL || 'admin@divishamakeovers.com',
-      mobile: '9999999999',
-      password: process.env.ADMIN_PASSWORD || 'ChangeMe@123',
-      role: 'admin',
-      address: {
-        line1: 'Admin Office',
-        district: 'Default',
-        state: 'Default',
-        postalCode: '000000',
-      },
-    });
-    console.log('Admin user created');
-  } else {
-    console.log('Admin already exists');
-  }
+  await ensureAdminAccount();
 
   const serviceCount = await Service.countDocuments();
   if (serviceCount === 0) {

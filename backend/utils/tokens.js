@@ -1,14 +1,15 @@
 import jwt from 'jsonwebtoken';
+import { randomInt } from 'node:crypto';
 
-export const generateToken = (id, rememberMe = false) => {
+export const generateToken = (id, rememberMe = false, sessionVersion = 0) => {
   const expiresIn = rememberMe
     ? process.env.JWT_REMEMBER_EXPIRE || '30d'
     : process.env.JWT_EXPIRE || '7d';
-  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn });
+  return jwt.sign({ id, sessionVersion }, process.env.JWT_SECRET, { expiresIn });
 };
 
 export const generateOTP = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return randomInt(100000, 1000000).toString();
 };
 
 export const generateBookingRef = () => {

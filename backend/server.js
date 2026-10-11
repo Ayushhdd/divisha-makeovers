@@ -19,7 +19,7 @@ import appointmentRoutes from './routes/appointmentRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 
-import User from './models/User.js';
+import { ensureAdminAccount } from './utils/adminBootstrap.js';
 import Service from './models/Service.js';
 import AdminSettings from './models/AdminSettings.js';
 import { seedServiceCatalog } from './data/serviceCatalog.js';
@@ -40,26 +40,7 @@ if (isCleanupEnabled) {
 // Auto-seed admin user on startup
 const seedAdmin = async () => {
   try {
-    const adminExists = await User.findOne({ role: 'admin' });
-    if (!adminExists) {
-      await User.create({
-        fullName: 'Admin',
-        email: process.env.ADMIN_EMAIL || 'admin@divishamakeovers.com',
-        mobile: '9999999999',
-        password: process.env.ADMIN_PASSWORD || 'ChangeMe@123',
-        role: 'admin',
-        address: {
-          line1: 'Admin Office',
-          district: 'Default',
-          state: 'Default',
-          postalCode: '000000',
-        },
-      });
-      console.log('✓ Admin created successfully');
-      console.log(`  Email: ${process.env.ADMIN_EMAIL || 'admin@divishamakeovers.com'}`);
-    } else {
-      console.log('✓ Admin already exists');
-    }
+    await ensureAdminAccount();
 
     const serviceCount = await Service.countDocuments();
     if (serviceCount === 0) {
@@ -76,7 +57,7 @@ const seedAdmin = async () => {
       console.log('✓ Admin settings initialized');
     }
   } catch (error) {
-    console.error('Error seeding admin:', error);
+    throw error;
   }
 };
 

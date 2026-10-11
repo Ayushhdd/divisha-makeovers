@@ -7,6 +7,11 @@ import crypto from 'crypto';
 const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
 const hashOTP = (otp, email) =>
   crypto.createHash('sha256').update(`${otp}:${normalizeEmail(email)}`).digest('hex');
+const passwordError = (password, role) => {
+  const minimum = role === 'admin' ? 15 : 6;
+  return typeof password !== 'string' || password.length < minimum || Buffer.byteLength(password, 'utf8') > 72
+    ? `Use a password of at least ${minimum} characters and no more than 72 UTF-8 bytes.` : '';
+};
 
 export const registerCustomer = async (req, res) => {
   const {
@@ -52,27 +57,24 @@ export const registerCustomer = async (req, res) => {
 
 export const login = async (req, res) => {
   const { email, password, rememberMe } = req.body;
+  if (typeof email !== 'string' || typeof password !== 'string') {
+    return res.status(401).json({ message: 'Invalid email or password' });
+  }
 
-  console.log(`[Login Attempt] Email: ${email.toLowerCase()}, Role check initiated`);
-
-  const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+  const user = await User.findOne({ email: normalizeEmail(email) }).select('+password +sessionVersion');
   if (!user) {
-    console.log(`[Login Failed] User not found: ${email.toLowerCase()}`);
     return res.status(401).json({ message: 'Invalid email or password' });
   }
 
   if (!(await user.matchPassword(password))) {
-    console.log(`[Login Failed] Password mismatch for: ${email.toLowerCase()}`);
     return res.status(401).json({ message: 'Invalid email or password' });
   }
 
   if (!user.isActive) {
-    console.log(`[Login Failed] Account deactivated: ${email.toLowerCase()}`);
     return res.status(401).json({ message: 'Account is deactivated' });
   }
 
-  const token = generateToken(user._id, rememberMe);
-  console.log(`[Login Success] User: ${email.toLowerCase()}, Role: ${user.role}`);
+  const token = generateToken(user._id, rememberMe, user.sessionVersion ?? 0);
 
   res.json({
     _id: user._id,
@@ -101,16 +103,37 @@ export const updateProfile = async (req, res) => {
 };
 
 export const changePassword = async (req, res) => {
-  const { currentPassword, newPassword } = req.body;
-  const user = await User.findById(req.user._id).select('+password');
+  const { currentPassword, newPassword, newEmail } = req.body;
+  const user = await User.findById(req.user._id).select('+password +sessionVersion');
 
-  if (!(await user.matchPassword(currentPassword))) {
+  if (typeof currentPassword !== 'string' || !(await user.matchPassword(currentPassword))) {
     return res.status(400).json({ message: 'Current password is incorrect' });
+  }
+  const validationError = passwordError(newPassword, user.role);
+  if (validationError) return res.status(400).json({ message: validationError });
+  if (await user.matchPassword(newPassword)) {
+    return res.status(400).json({ message: 'Choose a new password different from your current password.' });
+  }
+  if (newEmail !== undefined && user.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin access required to change the login email here.' });
+  }
+  if (newEmail !== undefined) {
+    const email = normalizeEmail(newEmail);
+    if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ message: 'Enter a valid login email.' });
+    if (await User.exists({ email, _id: { $ne: user._id } })) {
+      return res.status(400).json({ message: 'That email is already registered.' });
+    }
+    user.email = email;
   }
 
   user.password = newPassword;
+  user.sessionVersion = (user.sessionVersion ?? 0) + 1;
+  user.otp = undefined;
+  user.otpExpires = undefined;
+  user.otpAttempts = 0;
+  user.otpSentAt = undefined;
   await user.save();
-  res.json({ message: 'Password updated successfully' });
+  res.json({ message: 'Login updated. All sessions have been signed out. Sign in with your new details.' });
 };
 
 export const forgotPassword = async (req, res) => {
@@ -158,7 +181,7 @@ export const resetPassword = async (req, res) => {
     return res.status(400).json({ message: 'Enter a valid email, 6-digit OTP and a password of at least 6 characters' });
   }
 
-  const user = await User.findOne({ email }).select('+otp +otpExpires +otpAttempts +password');
+  const user = await User.findOne({ email }).select('+otp +otpExpires +otpAttempts +password +sessionVersion');
 
   if (!user || !user.otp || !user.otpExpires || user.otpExpires < new Date()) {
     return res.status(400).json({ message: 'Invalid or expired OTP' });
@@ -167,6 +190,8 @@ export const resetPassword = async (req, res) => {
   if (user.otpAttempts >= 5) {
     return res.status(429).json({ message: 'Too many incorrect OTP attempts. Please request a new OTP.' });
   }
+  const validationError = passwordError(newPassword, user.role);
+  if (validationError) return res.status(400).json({ message: validationError });
 
   if (user.otp !== hashOTP(otp, email)) {
     user.otpAttempts += 1;
@@ -175,6 +200,7 @@ export const resetPassword = async (req, res) => {
   }
 
   user.password = newPassword;
+  user.sessionVersion = (user.sessionVersion ?? 0) + 1;
   user.otp = undefined;
   user.otpExpires = undefined;
   user.otpAttempts = 0;

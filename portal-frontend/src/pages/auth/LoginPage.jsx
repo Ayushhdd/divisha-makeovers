@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { loginUser, clearError } from '../../store/authSlice';
 import Alert from '../../components/ui/Alert';
@@ -8,6 +8,8 @@ import Logo from '../../components/Logo';
 export default function LoginPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [message, setMessage] = useState(location.state?.message || '');
   const { loading, error } = useSelector((state) => state.auth);
   const [form, setForm] = useState({ email: '', password: '', rememberMe: false });
 
@@ -30,6 +32,7 @@ export default function LoginPage() {
           <p className="text-gray-500 text-sm mb-6">Sign in to your account</p>
 
           {error && <Alert message={error} onClose={() => dispatch(clearError())} />}
+          {message && <Alert type="success" message={message} onClose={() => setMessage('')} />}
 
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
             <div>
