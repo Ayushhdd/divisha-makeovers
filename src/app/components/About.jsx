@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import Image from "next/image";
+import Image from "@/app/components/SiteImage";
 import { useState } from "react";
 
 
@@ -171,8 +171,8 @@ pt-6 pb-0 sm:py-14 md:py-20
         alt="Divisha Bridal Makeup"
         width={560}
         height={560}
-        sizes="(max-width: 640px) 100vw, (max-width: 768px) 420px, 560px"
-        quality={86}
+        sizes="(max-width: 640px) 160vw, (max-width: 768px) 650px, 875px"
+        quality={92}
         className="w-full h-[240px] sm:h-[420px] md:w-[560px] md:h-[560px] sm:w-[420px] sm:h-[420px] md:w-[560px] md:h-[560px] object-cover contrast-[1.05] saturate-[1.05]"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/20" />
@@ -185,8 +185,8 @@ pt-6 pb-0 sm:py-14 md:py-20
         alt="Divisha Bridal Makeup"
         width={560}
         height={560}
-        sizes="(max-width: 640px) 100vw, (max-width: 768px) 420px, 560px"
-        quality={86}
+        sizes="(max-width: 640px) 160vw, (max-width: 768px) 650px, 875px"
+        quality={92}
         className="w-full h-[240px] sm:h-[420px] md:w-[560px] md:h-[560px] sm:w-[420px] sm:h-[420px] md:w-[560px] md:h-[560px] object-cover contrast-[1.05] saturate-[1.05]"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/20" />

@@ -38,6 +38,7 @@
 /public/party-bg/
 /public/signature-airbrush/
 /public/signature-hd/
+/src/app/generated/image-versions.json
 
 # misc
 .DS_Store

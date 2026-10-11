@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import Image from "next/image";
+import Image from "@/app/components/SiteImage";
 import { useState } from "react";
 
 export default function WhyChoose() {
@@ -130,7 +130,7 @@ border border-white/10
                 width={560}
                 height={720}
                 sizes="(max-width: 768px) 100vw, 560px"
-                quality={78}
+                quality={92}
                 className="
                   w-full max-w-[360px] md:w-[560px] md:max-w-none
                   h-[440px] md:h-[720px]

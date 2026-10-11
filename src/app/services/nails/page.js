@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import Image from "@/app/components/SiteImage";
 import Navbar from "@/app/components/Navbar";
 import ClosingEditorial from "@/app/components/ClosingEditorial";
 import GatedPriceAction from "@/app/components/GatedPriceAction";
@@ -98,7 +98,8 @@ Please share details, availability, and nail design options.`;
           fill
           priority
           sizes="100vw"
-          quality={78}
+          coverViewport
+          quality={92}
           className="object-cover"
         />
       </div>
@@ -167,8 +168,8 @@ Please share details, availability, and nail design options.`;
                   alt="Nail Extension Design"
                   width={1200}
                   height={672}
-                  sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 420px"
-                  quality={90}
+                  sizes="(max-width: 768px) 90vw, 550px"
+                  quality={92}
                   className="w-full h-[170px] sm:h-[240px] md:h-[280px] object-cover"
                   priority={index < 2}
                 />

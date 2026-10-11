@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import Image from "next/image";
+import Image from "@/app/components/SiteImage";
 import { X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -160,8 +160,8 @@ export default function Gallery() {
                 src={selectedImage}
                 alt="Makeup Look"
                 fill
-                sizes="(max-width: 768px) 100vw, 900px"
-                quality={88}
+                sizes="(max-width: 768px) 170vw, 900px"
+                quality={95}
                 className="object-contain"
                 priority
               />
@@ -216,8 +216,8 @@ export default function Gallery() {
                   alt="Makeup Look"
                   width={900}
                   height={1350}
-                  sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
-                  quality={78}
+                  sizes="(max-width: 768px) calc((100vw - 60px) / 2), (max-width: 1200px) calc((100vw - 112px) / 3), 352px"
+                  quality={92}
                   className="
                     w-full h-auto object-cover
                     transition-transform duration-700 ease-out

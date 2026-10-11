@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
+import Image from "@/app/components/SiteImage";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -74,7 +74,7 @@ export default function Navbar() {
                 width={171}
                 height={60}
                 sizes="171px"
-                quality={90}
+                quality={92}
                 className="h-12 w-auto opacity-95 hover:opacity-100 transition"
               />
             </Link>

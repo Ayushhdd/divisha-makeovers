@@ -8,11 +8,14 @@ and 21.77 MB of Functions Storage. It was not a MongoDB storage warning.
 
 - Preserved all original photography under `assets/site-images/`; copy the
   60 images used by the website into `public/`, at their existing URLs.
-  Per the owner's correction, all image resizing/recompression was rolled back.
-  Published photos contain exactly the original bytes (246.12 MB). Next.js image
-  optimization is disabled so pages display originals, avoiding lossy copies
-  and previously cached optimized images. Storage cleanup uses retention and
-  removal of unused assets/packages, without sacrificing photography quality.
+  Master files remain exactly the original bytes (246.12 MB). Per the owner's
+  clarified requirement, phones and desktops receive responsive WebP images
+  at quality 92, encoded once directly from masters (95 for gallery zoom).
+  Original hashes version delivery URLs to avoid older cached transformations.
+  A lossless portrait crop of the 9382px panoramic hero preserves its existing
+  mobile composition before responsive encoding. Sizes account for cropped
+  backgrounds and photographic detail, with lazy loading for lower sections.
+  Storage cleanup uses retention and removal of unused assets/packages.
 - Keep six unused photo alternatives in the source archive; omit them from
   deployments. Removed five unreferenced Next.js starter SVGs.
 - Removed the unused portal PWA build plugin. Retained the browser cleanup for
@@ -32,8 +35,16 @@ and 21.77 MB of Functions Storage. It was not a MongoDB storage warning.
 ## Verification
 
 - Full portal and Next production build passed.
-- All 60 published photos match the originals byte for byte.
+- All 60 image master files match the originals byte for byte.
   All 62 referenced image URLs exist, including the Next metadata icons.
+- Responsive mobile/desktop delivery and source-version cache refresh passed.
+  The prepared portrait background matches the original crop pixel for pixel.
+  High-density WebP profiles measured 404 KB for a 3840px desktop background,
+  573 KB for a 1920px portrait background, 272 KB for a 960px gallery thumbnail,
+  and 71 KB for a 1080px nail image. Compression PSNR ranged from 35.8 to 44.7 dB;
+  the mobile gallery enlargement and desktop/mobile composition were visually
+  checked. Run `npm run test:images -- <base-url>` with a running preview or live
+  website to check delivery, master preservation, quality, and cache headers.
 - Local HTTP checks passed for the homepage, four service pages, the legacy
   engagement URL, both portal login URLs, and original image URLs.
 - Scoped-session and UPI-link tests passed. Backend integration tests passed for

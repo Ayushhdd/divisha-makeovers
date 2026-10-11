@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import Image from "next/image";
+import Image from "@/app/components/SiteImage";
 import Link from "next/link";
 
 const services = [
@@ -130,7 +130,7 @@ export default function Services() {
                   alt=""
                   fill
                   sizes="(max-width: 768px) 100vw, 50vw"
-                  quality={78}
+                  quality={92}
                   className="object-cover object-[60%_40%]"
                 />
               </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import Image from "next/image";
+import Image from "@/app/components/SiteImage";
 
 
 
@@ -73,7 +73,7 @@ className="
               height={239}
               sizes="(max-width: 640px) 180px, (max-width: 768px) 220px, 340px"
               priority
-              quality={90}
+              quality={92}
               className="w-full h-auto"
             />
           </motion.div>

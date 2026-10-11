@@ -11,6 +11,7 @@
     "build:site": "next build",
     "prebuild:site": "npm run prepare:images",
     "prepare:images": "node scripts/prepare-site-images.mjs",
+    "test:images": "node scripts/test-site-images.mjs",
     "lint": "eslint src scripts portal-frontend/src backend --no-warn-ignored",
     "test": "node scripts/test-email-relay.mjs && npm --prefix portal-frontend run test:auth && npm --prefix backend run test:migration",
     "start": "next start",

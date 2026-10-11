@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+import { readFileSync } from 'node:fs';
+const imageVersions = JSON.parse(readFileSync(new URL('./src/app/generated/image-versions.json', import.meta.url), 'utf8'));
 const backendApiUrl = (process.env.BACKEND_API_URL || "http://localhost:5000/api").replace(
   /\/$/,
   ""
@@ -20,12 +22,13 @@ const nextConfig = {
     ];
   },
   images: {
-    // Display the original photo bytes; avoid lossy copies and old optimizer caches.
-    unoptimized: true,
-    formats: ["image/avif", "image/webp"],
-    deviceSizes: [360, 414, 640, 768, 1024, 1280, 1536, 1920, 2560, 3840],
+    // Encode responsive images once, directly from original/lossless masters.
+    formats: ["image/webp"],
+    localPatterns: [...new Set(Object.keys(imageVersions).map(src => `/${src.split('/')[1]}/*`))]
+      .map(pathname => ({ pathname })),
+    deviceSizes: [360, 414, 640, 768, 960, 1080, 1280, 1536, 1920, 2048, 2560, 3072, 3840, 5120, 7680],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    qualities: [60, 70, 75, 78, 82, 86, 88, 90, 92],
+    qualities: [90, 92, 95],
     minimumCacheTTL: 31536000,
   },
 };

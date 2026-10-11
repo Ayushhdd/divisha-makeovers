@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useEffect, useRef } from "react";
-import Image from "next/image";
+import Image from "@/app/components/SiteImage";
 import Navbar from "@/app/components/Navbar";
 import ClosingEditorial from "@/app/components/ClosingEditorial";
 import GatedPriceAction from "@/app/components/GatedPriceAction";
@@ -126,7 +126,8 @@ Please share availability and further details.`;
           fill
           priority
           sizes="100vw"
-          quality={78}
+          coverViewport
+          quality={92}
           className="object-cover"
         />
       </motion.div>
@@ -190,7 +191,7 @@ Please share availability and further details.`;
                           alt={section.title}
                           fill
                           sizes="(max-width: 768px) 50vw, (max-width: 1200px) 28vw, 440px"
-                          quality={86}
+                          quality={92}
                           className="object-cover"
                         />
                       </motion.div>
