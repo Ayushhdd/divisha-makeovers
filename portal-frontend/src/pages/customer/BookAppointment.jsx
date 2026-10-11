@@ -8,7 +8,7 @@ import { formatCurrency } from '../../utils/helpers';
 import Alert from '../../components/ui/Alert';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import UpiPaymentOptions from '../../components/UpiPaymentOptions';
-import { buildUpiLink } from '../../utils/upi';
+import useUpiPaymentRequest from '../../hooks/useUpiPaymentRequest';
 
 const PAYMENT_TIMER_SECONDS = 5 * 60;
 const todayIso = () => new Date().toISOString().split('T')[0];
@@ -179,9 +179,7 @@ export default function BookAppointment() {
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   }, [paymentTimer]);
   const paymentTimerProgress = (paymentTimer / PAYMENT_TIMER_SECONDS) * 100;
-  const upiPaymentLink = useMemo(() => {
-    return buildUpiLink({ upiId: settings?.upiId, businessName: settings?.businessName, amount: paymentAmount });
-  }, [paymentAmount, settings?.businessName, settings?.upiId]);
+  const { qrLink: upiPaymentLink, appLink, refreshRequest } = useUpiPaymentRequest(settings, paymentAmount);
 
   useEffect(() => {
     let isActive = true;
@@ -753,7 +751,7 @@ export default function BookAppointment() {
                 </div>
               </div>
               {settings.upiId && <p className="text-center text-sm">UPI: <strong>{settings.upiId}</strong></p>}
-              <UpiPaymentOptions settings={settings} amount={paymentAmount} qrCode={generatedQrCode} />
+              <UpiPaymentOptions settings={settings} amount={paymentAmount} paymentLink={appLink} refreshRequest={refreshRequest} qrCode={generatedQrCode} />
               <p className="text-xs text-gray-500 text-center">{settings.paymentInstructions}</p>
               <div>
                 <label className="label">Upload Payment Screenshot</label>

@@ -88,6 +88,17 @@ try {
     address: { line1: 'Test', district: 'Test', state: 'Test', postalCode: '144001' },
   }, 'POST', 201);
   const services = await request('/services');
+  const initialSettings = await request('/admin/settings/public');
+  assert.equal(initialSettings.upiIntentEnabled, false, 'Old settings must not claim merchant checkout support');
+  await request('/admin/settings', admin.token, { upiId: 'test@example', upiIntentEnabled: true }, 'PUT', 400);
+  await request('/admin/settings', admin.token, { upiId: 'test@example', upiIntentEnabled: true, merchantCategoryCode: '0000' }, 'PUT', 400);
+  await request('/admin/settings', admin.token, { merchantCategoryCode: 'wrong' }, 'PUT', 400);
+  await request('/admin/settings', admin.token, { upiId: 'test@example', upiIntentEnabled: true, merchantCategoryCode: '7298' }, 'PUT');
+  const merchantSettings = await request('/admin/settings/public');
+  assert.equal(merchantSettings.upiIntentEnabled, true);
+  assert.equal(merchantSettings.merchantCategoryCode, '7298');
+  const changedPayee = await request('/admin/settings', admin.token, { upiId: 'changed@example' }, 'PUT');
+  assert.equal(changedPayee.upiIntentEnabled, false, 'Changing the receiving UPI ID must require reconfirming merchant configuration');
   await request('/auth/login', '', {
     email: 'customer@example.invalid', password: 'TestPass12!', adminOnly: true,
   }, 'POST', 401);
@@ -285,7 +296,7 @@ try {
     if (savedEmail !== undefined) process.env.ADMIN_EMAIL = savedEmail;
     if (savedPassword !== undefined) process.env.ADMIN_PASSWORD = savedPassword;
   }
-  console.log('PASS: quantity pricing and legacy bookings, three-part receipts, OTP delivery with a signed isolated relay, missing-account and wrong-portal rejection, SMTP failure handling, password/email changes, session revocation, hashing, restart without restoring bootstrap login, and no default admin account.');
+  console.log('PASS: merchant checkout configuration and payee changes, quantity pricing and legacy bookings, three-part receipts, OTP delivery with a signed isolated relay, missing-account and wrong-portal rejection, SMTP failure handling, password/email changes, session revocation, hashing, restart without restoring bootstrap login, and no default admin account.');
 } finally {
   await stop();
   await mongoose.disconnect();

@@ -5,7 +5,7 @@ import Alert from '../../components/ui/Alert';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import UpiPaymentOptions from '../../components/UpiPaymentOptions';
 import QRCode from 'qrcode';
-import { buildUpiLink } from '../../utils/upi';
+import useUpiPaymentRequest from '../../hooks/useUpiPaymentRequest';
 
 export default function PaymentHistory() {
   const [payments, setPayments] = useState([]);
@@ -24,7 +24,7 @@ export default function PaymentHistory() {
   const pendingIds = new Set(payments.filter(item => item.status === 'pending').map(item => item.appointment?._id || item.appointment));
   const payable = appointments.filter(item => item.remainingBalance >= 1 && !['cancelled', 'rejected', 'completed'].includes(item.status) && !pendingIds.has(item._id));
   const amountValid = selectedBooking && Number(form.amount) >= 1 && Number(form.amount) <= selectedBooking.remainingBalance;
-  const upiLink = buildUpiLink({ upiId: settings?.upiId, businessName: settings?.businessName, amount: amountValid ? form.amount : 0, reference: selectedBooking?.bookingReference });
+  const { qrLink: upiLink, appLink, refreshRequest } = useUpiPaymentRequest(settings, amountValid ? form.amount : 0, selectedBooking?.bookingReference);
   useEffect(() => {
     let active = true;
     setQrCode('');
@@ -130,7 +130,7 @@ export default function PaymentHistory() {
             onChange={event => setForm({ ...form, amount: event.target.value })} />
         </div>
         {qrCode && <img src={qrCode} alt="Payment QR" className="mx-auto w-48 rounded-lg border border-softpink-200" />}
-        <UpiPaymentOptions settings={settings} amount={amountValid ? form.amount : 0} reference={selectedBooking?.bookingReference} qrCode={qrCode} />
+        <UpiPaymentOptions settings={settings} amount={amountValid ? form.amount : 0} paymentLink={appLink} refreshRequest={refreshRequest} qrCode={qrCode} />
         <div>
           <label htmlFor="payment-ref" className="label">UPI transaction reference (optional)</label>
           <input id="payment-ref" className="input-field" value={form.transactionRef} onChange={event => setForm({ ...form, transactionRef: event.target.value })} />

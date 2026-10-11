@@ -112,6 +112,25 @@ export const updateSettings = async (req, res) => {
 
   const { upiId, paymentInstructions, businessName, businessPhone, businessEmail, reminderHoursBefore } = req.body;
 
+  const merchantCategoryCode = req.body.merchantCategoryCode === undefined
+    ? settings.merchantCategoryCode : String(req.body.merchantCategoryCode).trim();
+  if (merchantCategoryCode && !/^\d{4}$/.test(merchantCategoryCode)) {
+    return res.status(400).json({ message: 'Enter the 4-digit merchant category code issued by your provider' });
+  }
+  const upiChanged = upiId !== undefined && String(upiId).trim() !== settings.upiId;
+  const intentFlag = req.body.upiIntentEnabled;
+  if (intentFlag !== undefined && ![true, false, 'true', 'false'].includes(intentFlag)) {
+    return res.status(400).json({ message: 'Invalid merchant checkout setting' });
+  }
+  const upiIntentEnabled = intentFlag === undefined ? (upiChanged ? false : settings.upiIntentEnabled)
+    : intentFlag === true || intentFlag === 'true';
+  const nextUpiId = String(upiId ?? settings.upiId).trim();
+  if (upiIntentEnabled && (!/^[\w.-]+@[\w.-]+$/.test(nextUpiId) || !/^\d{4}$/.test(merchantCategoryCode) || merchantCategoryCode === '0000')) {
+    return res.status(400).json({ message: 'Merchant checkout needs your verified merchant UPI ID and its assigned non-zero 4-digit category code. Manual UPI payments remain available.' });
+  }
+  settings.upiIntentEnabled = upiIntentEnabled;
+  settings.merchantCategoryCode = merchantCategoryCode || '';
+
   if (upiId !== undefined) settings.upiId = upiId;
   if (paymentInstructions !== undefined) settings.paymentInstructions = paymentInstructions;
   if (businessName !== undefined) settings.businessName = businessName;
@@ -135,6 +154,8 @@ export const getPublicSettings = async (req, res) => {
   if (!settings) settings = await AdminSettings.create({});
   res.json({
     upiId: settings.upiId,
+    upiIntentEnabled: settings.upiIntentEnabled,
+    merchantCategoryCode: settings.merchantCategoryCode,
     paymentInstructions: settings.paymentInstructions,
     businessName: settings.businessName,
     qrCodeUrl: settings.qrCode ? getFileUrl(settings.qrCode, req) : '',

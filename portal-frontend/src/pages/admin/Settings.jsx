@@ -24,6 +24,8 @@ export default function AdminSettings() {
     setError('');
     const formData = new FormData();
     formData.append('upiId', settings.upiId);
+    formData.append('upiIntentEnabled', settings.upiIntentEnabled === true);
+    formData.append('merchantCategoryCode', settings.merchantCategoryCode || '');
     formData.append('paymentInstructions', settings.paymentInstructions);
     formData.append('businessName', settings.businessName);
     formData.append('businessPhone', settings.businessPhone || '');
@@ -59,10 +61,23 @@ export default function AdminSettings() {
             onChange={(e) => setSettings({ ...settings, businessName: e.target.value })} />
         </div>
         <div>
-          <label className="label">UPI ID</label>
-          <input className="input-field" placeholder="yourname@upi"
+          <label className="label" htmlFor="settings-upi-id">UPI ID</label>
+          <input id="settings-upi-id" className="input-field" placeholder="yourname@upi"
             value={settings.upiId || ''}
-            onChange={(e) => setSettings({ ...settings, upiId: e.target.value })} />
+            onChange={(e) => setSettings({ ...settings, upiId: e.target.value, upiIntentEnabled: false, merchantCategoryCode: '' })} />
+        </div>
+        <div className="space-y-3 rounded-xl border border-softpink-200 p-3">
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" checked={settings.upiIntentEnabled === true}
+              onChange={(e) => setSettings({ ...settings, upiIntentEnabled: e.target.checked })} />
+            Enable merchant app checkout
+          </label>
+          <p className="text-xs text-gray-600">Enable only for a merchant UPI ID approved for website/app payments by your bank or payment provider. Verification of a personal UPI ID is not merchant onboarding.</p>
+          <label className="label" htmlFor="settings-merchant-code">Merchant Category Code (MCC)</label>
+          <input id="settings-merchant-code" className="input-field" inputMode="numeric" pattern="[0-9]{4}" maxLength="4" required={settings.upiIntentEnabled === true}
+            placeholder="Code assigned by your provider" value={settings.merchantCategoryCode || ''}
+            onChange={(e) => setSettings({ ...settings, merchantCategoryCode: e.target.value.replace(/\D/g, '') })} />
+          <p className="text-xs text-gray-600">Use the actual code from your merchant details or original provider QR. Do not guess it. With checkout off, customers can still copy your UPI ID or save the QR and pay inside their app.</p>
         </div>
         <div>
           <label className="label">Payment QR Code</label>

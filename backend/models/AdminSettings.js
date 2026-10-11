@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 const adminSettingsSchema = new mongoose.Schema(
   {
     upiId: { type: String, trim: true, default: '' },
+    upiIntentEnabled: { type: Boolean, default: false },
+    merchantCategoryCode: { type: String, trim: true, default: '' },
     qrCode: { type: String, default: '' },
     paymentInstructions: {
       type: String,
