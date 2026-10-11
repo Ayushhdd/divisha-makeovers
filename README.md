@@ -108,6 +108,8 @@ Render Free blocks SMTP ports. Set backend `EMAIL_RELAY_URL=https://<website>/ap
 
 Run `npm --prefix backend run test:migration` to test against an isolated temporary MongoDB instance, including image retrieval after a backend restart and payment approvals and receipts. The test never connects to production data or sends real email.
 
+With the deployed backend values in your ignored `backend/.env`, run `node scripts/checkLiveMigration.js --email` from `backend` to check the live database health, website proxy, authenticated admin routes, payment settings, stored QR image, and SMTP connection. It creates no customer, booking, payment, or email message. The optional `--setup-qr` flag replaces the configured payment QR with one generated from the current UPI ID and business name; it also requires the portal dependencies to be installed.
+
 Free services sleep when idle and take time to wake. In-process hourly appointment reminders run only while the service is awake. Use an always-on service or an external scheduler if reminders must be delivered on time. The database's free storage quota also includes uploaded images.
 
 Replacing a database connection does not copy historical records or Railway volume files. Import a verified database export and old uploads separately if available; never silently treat an empty database as a completed data migration.
