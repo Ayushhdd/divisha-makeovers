@@ -9,6 +9,7 @@ const appointmentServiceSchema = new mongoose.Schema(
     customServiceName: { type: String, trim: true },
     customServicePrice: { type: Number, min: 0 },
     price: { type: Number, required: true, min: 0 },
+    quantity: { type: Number, default: 1, min: 1, max: 100, validate: Number.isInteger },
     duration: { type: Number, default: 60 },
   },
   { _id: false }

@@ -41,9 +41,12 @@ export async function POST(request) {
         typeof html !== 'string' || html.length > 24000) {
       return Response.json({ error: 'Invalid email' }, { status: 400 });
     }
-    await transporter.sendMail({
+    const delivery = await transporter.sendMail({
       from: process.env.EMAIL_FROM || process.env.SMTP_USER, to, subject, html,
     });
+    if (!delivery?.accepted?.length || delivery.rejected?.length) {
+      throw new Error('Recipient was not accepted by the email provider');
+    }
     return Response.json({ ok: true });
   } catch (error) {
     console.error('[backend-email] Delivery failed:', error.code || 'unknown');

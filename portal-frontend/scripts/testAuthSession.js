@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { getPortalRole, loadSession, saveSession, clearSession } from '../src/utils/authSession.js';
+import { buildUpiLink, googlePayLink } from '../src/utils/upi.js';
 
 const values = new Map();
 const storage = {
@@ -34,4 +35,15 @@ for (const path of ['/portal/divisha/dashboard', '/divisha/login', '/', '/portal
 for (const path of ['/portal/admin/login', '/admin', '/portal/admin/change-password']) {
   assert.equal(getPortalRole(path), 'admin');
 }
-console.log('PASS: portal routing, legacy session migration, separate customer/admin sign-in and logout, and rejection of mismatched saved roles.');
+const link = buildUpiLink({ upiId: 'business@example', businessName: 'Test & Makeup', amount: 2500.5, reference: 'TEST-123' });
+const query = new URLSearchParams(link.split('?')[1]);
+assert.equal(query.get('pa'), 'business@example');
+assert.equal(query.get('pn'), 'Test & Makeup');
+assert.equal(query.get('am'), '2500.50');
+assert.equal(query.get('cu'), 'INR');
+assert.equal(query.get('tr'), 'TEST-123');
+assert.ok(link.startsWith('upi://pay?'));
+assert.equal(googlePayLink(link).split('?')[1], link.split('?')[1]);
+for (const amount of [0, -1, 'invalid', Infinity]) assert.equal(buildUpiLink({ upiId: 'test@example', amount }), '');
+assert.equal(buildUpiLink({ amount: 100 }), '');
+console.log('PASS: separate customer/admin sessions and UPI links preserve payee, amount, currency, and booking reference; invalid amounts cannot launch a payment.');

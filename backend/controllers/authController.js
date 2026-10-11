@@ -5,6 +5,7 @@ import { notifyAdmin } from '../utils/notifications.js';
 import crypto from 'crypto';
 
 const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
+const recoveryRole = (body) => ['admin', 'customer'].includes(body.accountType) ? body.accountType : undefined;
 const hashOTP = (otp, email) =>
   crypto.createHash('sha256').update(`${otp}:${normalizeEmail(email)}`).digest('hex');
 const passwordError = (password, role) => {
@@ -144,15 +145,22 @@ export const forgotPassword = async (req, res) => {
     return res.status(400).json({ message: 'Please enter a valid email address' });
   }
 
-  const user = await User.findOne({ email }).select('+otp +otpExpires +otpAttempts +otpSentAt');
+  if (req.body.accountType !== undefined && !recoveryRole(req.body)) {
+    return res.status(400).json({ message: 'Choose a valid account type' });
+  }
+  const role = recoveryRole(req.body);
+  const user = await User.findOne({ email, ...(role ? { role } : {}) }).select('+otp +otpExpires +otpAttempts +otpSentAt');
 
   if (!user) {
-    return res.json({ message: 'If email exists, OTP has been sent' });
+    return res.status(404).json({ message: role === 'admin'
+      ? 'No admin account found for this email.'
+      : 'No customer account found for this email. Please register first, then request an OTP.' });
   }
 
   const resendWindowMs = 60 * 1000;
   if (user.otpSentAt && Date.now() - user.otpSentAt.getTime() < resendWindowMs) {
-    return res.status(429).json({ message: 'Please wait one minute before requesting another OTP' });
+    return res.status(429).json({ message: 'Please wait one minute before requesting another OTP',
+      retryAfter: Math.ceil((resendWindowMs - (Date.now() - user.otpSentAt.getTime())) / 1000) });
   }
 
   const otp = generateOTP();
@@ -172,7 +180,7 @@ export const forgotPassword = async (req, res) => {
     return res.status(503).json({ message: 'OTP email could not be sent. Please try again later.' });
   }
 
-  res.json({ message: 'If email exists, OTP has been sent' });
+  res.json({ message: 'OTP sent. Check your inbox and spam folder.', retryAfter: 60, expiresIn: 600 });
 };
 
 export const resetPassword = async (req, res) => {
@@ -183,7 +191,11 @@ export const resetPassword = async (req, res) => {
     return res.status(400).json({ message: 'Enter a valid email, 6-digit OTP and a password of at least 6 characters' });
   }
 
-  const user = await User.findOne({ email }).select('+otp +otpExpires +otpAttempts +password +sessionVersion');
+  if (req.body.accountType !== undefined && !recoveryRole(req.body)) {
+    return res.status(400).json({ message: 'Choose a valid account type' });
+  }
+  const role = recoveryRole(req.body);
+  const user = await User.findOne({ email, ...(role ? { role } : {}) }).select('+otp +otpExpires +otpAttempts +password +sessionVersion');
 
   if (!user || !user.otp || !user.otpExpires || user.otpExpires < new Date()) {
     return res.status(400).json({ message: 'Invalid or expired OTP' });

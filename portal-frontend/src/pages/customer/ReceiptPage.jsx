@@ -61,8 +61,10 @@ export default function ReceiptPage() {
           <p className="font-medium mb-2">Services</p>
           {appointment.services?.map((service, index) => (
             <div key={index} className="flex justify-between text-sm py-1">
-              <span>{service.service?.name || service.customServiceName}</span>
-              <span>{formatCurrency(service.price)}</span>
+              <span>{service.service?.name || service.customServiceName} × {service.quantity || 1}
+                <span className="block text-xs text-gray-500">{formatCurrency(service.price)} each</span>
+              </span>
+              <span>{formatCurrency(service.price * (service.quantity || 1))}</span>
             </div>
           ))}
         </div>

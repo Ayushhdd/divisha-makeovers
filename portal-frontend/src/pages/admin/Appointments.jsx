@@ -152,6 +152,11 @@ export default function AdminAppointments() {
                   </div>
                 </div>
 
+                <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-600">
+                  {appointment.services?.map((item, index) => <span key={index} className="rounded-lg bg-softpink-100 px-2 py-1">
+                    {item.service?.name || item.customServiceName} × {item.quantity || 1}
+                  </span>)}
+                </div>
                 {payment && (
                   <div className="mt-3 rounded-xl border border-softpink-100 bg-softpink-50 p-3 text-sm">
                     <div className="flex flex-wrap items-center justify-between gap-2">

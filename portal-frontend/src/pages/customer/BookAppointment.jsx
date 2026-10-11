@@ -2,11 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
-import { fetchServices, toggleService, clearSelected } from '../../store/serviceSlice';
+import { fetchServices, toggleService, clearSelected, setServiceQuantity } from '../../store/serviceSlice';
 import api from '../../api/axios';
 import { formatCurrency } from '../../utils/helpers';
 import Alert from '../../components/ui/Alert';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import UpiPaymentOptions from '../../components/UpiPaymentOptions';
+import { buildUpiLink } from '../../utils/upi';
 
 const PAYMENT_TIMER_SECONDS = 5 * 60;
 const todayIso = () => new Date().toISOString().split('T')[0];
@@ -94,8 +96,10 @@ const getCompleteCustomServices = (services) =>
       name: service.name.trim(),
       price: parseFloat(service.price),
       duration: parseInt(service.duration, 10) || 60,
+      quantity: Number(service.quantity ?? 1),
     }))
-    .filter((service) => service.name && Number.isFinite(service.price) && service.price > 0);
+    .filter((service) => service.name && Number.isFinite(service.price) && service.price > 0 &&
+      Number.isInteger(service.quantity) && service.quantity >= 1 && service.quantity <= 100);
 
 export default function BookAppointment() {
   const dispatch = useDispatch();
@@ -125,9 +129,11 @@ export default function BookAppointment() {
 
   useEffect(() => {
     dispatch(fetchServices({ search, category }));
+  }, [dispatch, search, category]);
+  useEffect(() => {
     api.get('/admin/settings/public').then(({ data }) => setSettings(data));
     return () => dispatch(clearSelected());
-  }, [dispatch, search, category]);
+  }, [dispatch]);
 
   const completeCustomServices = useMemo(
     () => getCompleteCustomServices(customServices),
@@ -137,16 +143,17 @@ export default function BookAppointment() {
   const hasPartialCustomService = customServices.some((service) => {
     const hasName = service.name.trim();
     const hasPrice = String(service.price).trim();
-    return (hasName || hasPrice) && !(hasName && parseFloat(service.price) > 0);
+    const quantity = Number(service.quantity ?? 1);
+    return (hasName || hasPrice) && !(hasName && parseFloat(service.price) > 0 && Number.isInteger(quantity) && quantity >= 1 && quantity <= 100);
   });
   const hasBookingItems =
     selected.length > 0 || completeCustomServices.length > 0 || form.customServiceRequest.trim();
   const appointmentDetailsComplete =
     Boolean(form.appointmentDate) && Boolean(form.appointmentTime) && Boolean(form.venue.trim());
 
-  const total = selected.reduce((sum, s) => sum + s.price, 0) +
-    completeCustomServices.reduce((sum, s) => sum + s.price, 0);
-  const selectedItemCount = selected.length + completeCustomServices.length;
+  const total = selected.reduce((sum, s) => sum + Math.round(s.price * 100) * (s.quantity || 1), 0) / 100 +
+    completeCustomServices.reduce((sum, s) => sum + Math.round(s.price * 100) * s.quantity, 0) / 100;
+  const selectedItemCount = selected.reduce((sum, s) => sum + (s.quantity || 1), 0) + completeCustomServices.reduce((sum, s) => sum + s.quantity, 0);
   const serviceGroups = useMemo(() => {
     const order = BOOKING_CATEGORIES.map((item) => item.value).filter(Boolean);
     const groups = list.reduce((acc, service) => {
@@ -165,7 +172,7 @@ export default function BookAppointment() {
   const requestedAdvance = parseFloat(form.advanceAmount) || 0;
   const advance = form.paymentOption === 'pay_now' ? requestedAdvance : 0;
   const remaining = total - advance;
-  const paymentAmount = advance > 0 ? advance : total;
+  const paymentAmount = Number.isFinite(advance) && advance >= 1 && advance <= total ? advance : 0;
   const paymentTimerLabel = useMemo(() => {
     const minutes = Math.floor(paymentTimer / 60);
     const seconds = paymentTimer % 60;
@@ -173,25 +180,14 @@ export default function BookAppointment() {
   }, [paymentTimer]);
   const paymentTimerProgress = (paymentTimer / PAYMENT_TIMER_SECONDS) * 100;
   const upiPaymentLink = useMemo(() => {
-    if (!settings?.upiId) return '';
-
-    const params = new URLSearchParams({
-      pa: settings.upiId,
-      pn: settings.businessName || 'Divisha Makeovers',
-      cu: 'INR',
-    });
-
-    if (paymentAmount > 0) {
-      params.set('am', paymentAmount.toFixed(2));
-    }
-
-    return `upi://pay?${params.toString()}`;
+    return buildUpiLink({ upiId: settings?.upiId, businessName: settings?.businessName, amount: paymentAmount });
   }, [paymentAmount, settings?.businessName, settings?.upiId]);
 
   useEffect(() => {
     let isActive = true;
 
     setQrImageFailed(false);
+    setGeneratedQrCode('');
 
     if (!upiPaymentLink) {
       setGeneratedQrCode('');
@@ -287,8 +283,8 @@ export default function BookAppointment() {
       setError('Minimum advance of Rs. 1 required for Pay Now');
       return;
     }
-    if (form.paymentOption === 'pay_now' && paymentTimer === 0) {
-      setError('Payment window expired. Please go back and generate the QR again.');
+    if (form.paymentOption === 'pay_now' && advance > total) {
+      setError('The payment amount cannot exceed the booking total.');
       return;
     }
     if (form.paymentOption === 'pay_now' && !screenshot) {
@@ -299,6 +295,7 @@ export default function BookAppointment() {
     setSubmitting(true);
     const formData = new FormData();
     formData.append('serviceIds', JSON.stringify(selected.map((s) => s._id)));
+    formData.append('serviceQuantities', JSON.stringify(Object.fromEntries(selected.map(s => [s._id, s.quantity || 1]))));
     formData.append('customServices', JSON.stringify(completeCustomServices));
     formData.append('customServiceRequest', form.customServiceRequest.trim());
     formData.append('appointmentDate', form.appointmentDate);
@@ -323,7 +320,7 @@ export default function BookAppointment() {
   };
 
   const addCustomService = () => {
-    setCustomServices([...customServices, { name: '', price: '', duration: 60 }]);
+    setCustomServices([...customServices, { name: '', price: '', duration: 60, quantity: 1 }]);
   };
 
   const removeCustomService = (index) => {
@@ -524,7 +521,7 @@ export default function BookAppointment() {
               onChange={(e) => setForm({ ...form, customServiceRequest: e.target.value })}
             />
             {customServices.map((cs, i) => (
-              <div key={i} className="grid grid-cols-[1fr_120px_auto] gap-2 max-sm:grid-cols-1">
+              <div key={i} className="grid grid-cols-[1fr_120px_90px_auto] gap-2 max-sm:grid-cols-1">
                 <input placeholder="Service name" className="input-field" value={cs.name}
                   onChange={(e) => {
                     const updated = [...customServices];
@@ -537,6 +534,8 @@ export default function BookAppointment() {
                     updated[i].price = e.target.value;
                     setCustomServices(updated);
                   }} />
+                <input type="number" aria-label={`Quantity for custom service ${i + 1}`} min="1" max="100" step="1" className="input-field" value={cs.quantity}
+                  onChange={e => setCustomServices(customServices.map((item, index) => index === i ? { ...item, quantity: e.target.value } : item))} />
                 <button
                   type="button"
                   onClick={() => removeCustomService(i)}
@@ -571,13 +570,22 @@ export default function BookAppointment() {
                   {selected.map((svc) => (
                     <div key={svc._id} className="rounded-xl border border-white/10 bg-white/5 p-3">
                       <p className="text-sm font-semibold leading-5">{svc.name}</p>
-                      <p className="mt-1 text-xs text-white/55">{formatCurrency(svc.price)}</p>
+                      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                        <label className="flex items-center gap-2 text-xs text-white/75">
+                          Number of services
+                          <input type="number" min="1" max="100" step="1" aria-label={`Quantity for ${svc.name}`} value={svc.quantity || 1}
+                            onFocus={event => event.target.select()}
+                            onChange={e => dispatch(setServiceQuantity({ id: svc._id, quantity: e.target.value }))}
+                            className="w-16 rounded-lg border border-white/20 bg-white px-2 py-1.5 text-gray-900" />
+                        </label>
+                        <p className="text-xs text-white/70">{formatCurrency(svc.price)} × {svc.quantity || 1} = {formatCurrency(svc.price * (svc.quantity || 1))}</p>
+                      </div>
                     </div>
                   ))}
                   {completeCustomServices.map((svc) => (
                     <div key={svc.name} className="rounded-xl border border-white/10 bg-white/5 p-3">
                       <p className="text-sm font-semibold leading-5">{svc.name}</p>
-                      <p className="mt-1 text-xs text-white/55">{formatCurrency(svc.price)}</p>
+                      <p className="mt-1 text-xs text-white/55">{formatCurrency(svc.price)} × {svc.quantity} = {formatCurrency(svc.price * svc.quantity)}</p>
                     </div>
                   ))}
                 </>
@@ -708,7 +716,7 @@ export default function BookAppointment() {
           {form.paymentOption === 'pay_now' && settings && (
             <div className="card space-y-3">
               <div className="flex flex-col items-center gap-3 text-center">
-                {generatedQrCode || (settings.qrCodeUrl && !qrImageFailed) ? (
+                {generatedQrCode || (paymentAmount > 0 && settings.qrCodeUrl && !qrImageFailed) ? (
                   <img
                     src={generatedQrCode || settings.qrCodeUrl}
                     alt="Payment QR"
@@ -718,7 +726,7 @@ export default function BookAppointment() {
                   />
                 ) : (
                   <div className="w-48 rounded-lg border border-dashed border-rosegold-300 bg-softpink-50 p-5 text-sm text-gray-600">
-                    Payment QR will appear after UPI details are configured.
+                    {settings.upiId ? 'Enter an advance amount within the booking total to generate the payment QR.' : 'Payment QR will appear after UPI details are configured.'}
                   </div>
                 )}
                 {generatedQrCode && (
@@ -728,9 +736,9 @@ export default function BookAppointment() {
                 )}
                 <div className="w-full max-w-xs rounded-2xl border border-rosegold-200 bg-softpink-50 px-4 py-3">
                   <div className="flex items-center justify-between text-xs font-medium text-gray-600">
-                    <span>Payment window</span>
+                    <span>Screenshot reminder</span>
                     <span className={paymentTimer === 0 ? 'text-red-500' : 'text-rosegold-700'}>
-                      {paymentTimer === 0 ? 'Expired' : paymentTimerLabel}
+                      {paymentTimer === 0 ? 'Upload screenshot' : paymentTimerLabel}
                     </span>
                   </div>
                   <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white">
@@ -741,12 +749,11 @@ export default function BookAppointment() {
                       style={{ width: `${paymentTimerProgress}%` }}
                     />
                   </div>
-                  <p className="mt-2 text-[11px] text-gray-500">
-                    Complete the UPI payment before the timer ends.
-                  </p>
+                  <p className="mt-2 text-[11px] text-gray-500">Return here after paying to upload your screenshot. The timer does not cancel a payment.</p>
                 </div>
               </div>
               {settings.upiId && <p className="text-center text-sm">UPI: <strong>{settings.upiId}</strong></p>}
+              <UpiPaymentOptions settings={settings} amount={paymentAmount} qrCode={generatedQrCode} />
               <p className="text-xs text-gray-500 text-center">{settings.paymentInstructions}</p>
               <div>
                 <label className="label">Upload Payment Screenshot</label>

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
+import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { mkdtemp, readdir, rm } from 'node:fs/promises';
@@ -18,6 +19,21 @@ const mongo = await MongoMemoryServer.create({ binary: {
 const staging = await mkdtemp(path.join(os.tmpdir(), 'divisha-migration-test-'));
 const port = 15051;
 const base = `http://127.0.0.1:${port}`;
+const deliveredEmails = [];
+let rejectEmail = false;
+const relay = createServer(async (req, res) => {
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  const body = Buffer.concat(chunks).toString();
+  const expected = createHmac('sha256', 'isolated-test-email-relay').update(`${req.headers['x-email-timestamp']}.${body}`).digest('hex');
+  if (req.headers['x-email-signature'] !== expected) { res.writeHead(401).end(); return; }
+  if (rejectEmail) { res.writeHead(502).end(); return; }
+  deliveredEmails.push(JSON.parse(body));
+  res.writeHead(200, { 'Content-Type': 'application/json' }).end('{"ok":true}');
+});
+relay.listen(0, '127.0.0.1');
+await once(relay, 'listening');
+const relayUrl = `http://127.0.0.1:${relay.address().port}`;
 let server;
 let logs = '';
 const stop = async () => {
@@ -37,7 +53,7 @@ const start = async () => {
       ADMIN_EMAIL: 'admin@example.invalid', ADMIN_PASSWORD: 'TestPass12!',
       UPLOAD_STORAGE: 'mongodb', UPLOAD_DIR: staging, API_URL: base,
       CLIENT_URL: 'https://divishamakeovers.com',
-      EMAIL_RELAY_URL: '', EMAIL_RELAY_SECRET: '', SMTP_HOST: '', SMTP_USER: '', SMTP_PASS: '',
+      EMAIL_RELAY_URL: relayUrl, EMAIL_RELAY_SECRET: 'isolated-test-email-relay', SMTP_HOST: '', SMTP_USER: '', SMTP_PASS: '',
     }, stdio: ['ignore', 'pipe', 'pipe'],
   });
   server.stdout.on('data', data => { logs += data; });
@@ -87,17 +103,33 @@ try {
   assert.equal(customerLogin.role, 'customer');
   await request('/admin/dashboard', customerLogin.token, undefined, 'GET', 403);
   assert.ok(services.length);
+  const engagement = services.find(service => service.category === 'Engagement & Reception Makeup') || services[0];
+  const quantityBody = {
+    serviceIds: [engagement._id], serviceQuantities: { [engagement._id]: 5 },
+    appointmentDate: '2099-10-12', appointmentTime: '10:00', venue: 'Isolated quantity test', paymentOption: 'pay_later',
+  };
+  for (const quantity of [0, -1, 1.5, 101, 'invalid']) {
+    await request('/appointments', customer.token, { ...quantityBody, serviceQuantities: { [engagement._id]: quantity } }, 'POST', 400);
+  }
+  await request('/appointments', customer.token, { ...quantityBody, serviceIds: [engagement._id, engagement._id] }, 'POST', 400);
+  const legacyBooking = await request('/appointments', customer.token, { ...quantityBody, serviceQuantities: undefined }, 'POST', 201);
+  assert.equal(legacyBooking.services[0].quantity, 1);
+  assert.equal(legacyBooking.totalAmount, engagement.price);
   const screenshot = await sharp({ create: {
     width: 100, height: 100, channels: 3, background: '#336699',
   } }).png().toBuffer();
   const bookingForm = new FormData();
   Object.entries({
-    serviceIds: JSON.stringify([services[0]._id]), appointmentDate: '2099-10-12',
+    serviceIds: JSON.stringify([engagement._id]), serviceQuantities: JSON.stringify({ [engagement._id]: 5 }),
+    customServices: JSON.stringify([{ name: 'Test custom service', price: 100, quantity: 2 }]), totalAmount: '1', appointmentDate: '2099-10-12',
     appointmentTime: '10:00', venue: 'Isolated test venue', advanceAmount: '1', paymentOption: 'pay_now',
   }).forEach(([key, value]) => bookingForm.set(key, value));
   bookingForm.set('paymentScreenshot', new Blob([screenshot], { type: 'image/png' }), 'test.png');
   const booking = await request('/appointments', customer.token, bookingForm, 'POST', 201);
   assert.equal(booking.advancePaid, 0);
+  assert.equal(booking.totalAmount, engagement.price * 5 + 200, 'Backend must calculate quantity totals itself, ignoring supplied totals');
+  assert.equal(booking.services[0].quantity, 5);
+  assert.equal(booking.services[1].quantity, 2);
   const payments = await request('/payments/my', customer.token);
   assert.equal(payments.length, 1);
   assert.equal(payments[0].status, 'pending');
@@ -117,6 +149,8 @@ try {
   await request(`/payments/${payments[0]._id}/verify`, admin.token, { status: 'verified' }, 'PUT', 400);
   const receipt = await request(`/appointments/${booking._id}/receipt`, customer.token);
   assert.equal(receipt.appointment.advancePaid, 1);
+  assert.equal(receipt.appointment.services[0].quantity, 5);
+  assert.equal(receipt.appointment.services[1].quantity, 2);
   assert.equal(receipt.appointment.remainingBalance, booking.totalAmount - 1);
   assert.equal(receipt.appointment.status, 'confirmed');
   const splitForm = new FormData();
@@ -141,6 +175,28 @@ try {
   const cors = await fetch(`${base}/api/health`, { headers: { Origin: 'https://divishamakeovers.com' } });
   assert.equal(cors.headers.get('access-control-allow-origin'), 'https://divishamakeovers.com');
   await mongoose.connect(mongo.getUri('render_migration_test'));
+  const otpEmailCount = () => deliveredEmails.filter(email => email.subject.includes('Password Reset OTP')).length;
+  let emailCount = otpEmailCount();
+  await request('/auth/forgot-password', '', { email: 'missing@example.invalid', accountType: 'customer' }, 'POST', 404);
+  await request('/auth/forgot-password', '', { email: 'admin@example.invalid', accountType: 'customer' }, 'POST', 404);
+  assert.equal(otpEmailCount(), emailCount, 'Missing and wrong-role accounts must not send an OTP');
+  rejectEmail = true;
+  await request('/auth/forgot-password', '', { email: 'customer@example.invalid', accountType: 'customer' }, 'POST', 503);
+  assert.equal((await mongoose.connection.collection('users').findOne({ email: 'customer@example.invalid' })).otp, undefined);
+  rejectEmail = false;
+  const otpSent = await request('/auth/forgot-password', '', { email: 'customer@example.invalid', accountType: 'customer' }, 'POST');
+  assert.equal(otpSent.retryAfter, 60);
+  assert.equal(otpEmailCount(), emailCount + 1);
+  const deliveredOtp = deliveredEmails.filter(email => email.subject.includes('Password Reset OTP')).at(-1).html.match(/<h1[^>]*>(\d{6})<\/h1>/)[1];
+  const otpRecord = await mongoose.connection.collection('users').findOne({ email: 'customer@example.invalid' });
+  assert.notEqual(otpRecord.otp, deliveredOtp);
+  assert.equal(otpRecord.otp, createHash('sha256').update(`${deliveredOtp}:customer@example.invalid`).digest('hex'));
+  await request('/auth/forgot-password', '', { email: 'customer@example.invalid', accountType: 'customer' }, 'POST', 429);
+  assert.equal(otpEmailCount(), emailCount + 1);
+  await request('/auth/reset-password', '', { email: 'customer@example.invalid', accountType: 'admin', otp: deliveredOtp, newPassword: 'ClientPass9!' }, 'POST', 400);
+  await request('/auth/reset-password', '', { email: 'customer@example.invalid', accountType: 'customer', otp: deliveredOtp, newPassword: 'ClientPass9!' }, 'POST');
+  await request('/auth/profile', customer.token, undefined, 'GET', 401);
+  await request('/auth/login', '', { email: 'customer@example.invalid', password: 'ClientPass9!', customerOnly: true }, 'POST');
   const qrForm = new FormData();
   qrForm.set('qrCode', new Blob([screenshot], { type: 'image/png' }), 'qr.png');
   const qr = await request('/admin/settings', admin.token, qrForm, 'PUT');
@@ -229,10 +285,11 @@ try {
     if (savedEmail !== undefined) process.env.ADMIN_EMAIL = savedEmail;
     if (savedPassword !== undefined) process.env.ADMIN_PASSWORD = savedPassword;
   }
-  console.log('PASS: migration, three-part payments and receipts, password/email changes, session revocation, password hashing, OTP reset, restart without restoring bootstrap login, and no default admin account.');
+  console.log('PASS: quantity pricing and legacy bookings, three-part receipts, OTP delivery with a signed isolated relay, missing-account and wrong-portal rejection, SMTP failure handling, password/email changes, session revocation, hashing, restart without restoring bootstrap login, and no default admin account.');
 } finally {
   await stop();
   await mongoose.disconnect();
   await mongo.stop();
+  await new Promise(resolve => relay.close(resolve));
   await rm(staging, { recursive: true, force: true });
 }

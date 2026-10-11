@@ -17,7 +17,7 @@ const populateAppointment = (query) =>
     .populate('services.service', 'name category price duration');
 
 const parseJsonField = (value, fallback = []) => {
-  if (Array.isArray(value)) return value;
+  if (value && typeof value === 'object') return value;
   if (typeof value === 'string') {
     try {
       return JSON.parse(value);
@@ -37,10 +37,11 @@ const normalizeCustomServices = (customServices) => {
     const rawPrice = String(service?.price ?? '').trim();
     const price = parseFloat(rawPrice);
     const duration = parseInt(service?.duration, 10) || 60;
+    const quantity = Number(service?.quantity ?? 1);
 
     if (!name && !rawPrice) continue;
 
-    if (!name || !Number.isFinite(price) || price <= 0) {
+    if (!name || !Number.isFinite(price) || price <= 0 || !Number.isInteger(quantity) || quantity < 1 || quantity > 100) {
       hasPartial = true;
       continue;
     }
@@ -49,6 +50,7 @@ const normalizeCustomServices = (customServices) => {
       name,
       price,
       duration: Math.max(duration, 15),
+      quantity,
     });
   }
 
@@ -68,6 +70,11 @@ const parseAppointmentDate = (value) => {
 export const createBooking = async (req, res) => {
   const serviceIds = parseJsonField(req.body.serviceIds, []);
   const customServices = parseJsonField(req.body.customServices, []);
+  const serviceQuantities = parseJsonField(req.body.serviceQuantities, {});
+  if (!Array.isArray(serviceIds) || !Array.isArray(customServices) ||
+      !serviceQuantities || typeof serviceQuantities !== 'object' || Array.isArray(serviceQuantities)) {
+    return res.status(400).json({ message: 'Invalid service selection or quantities' });
+  }
   const {
     customServiceRequest,
     appointmentDate,
@@ -84,6 +91,14 @@ export const createBooking = async (req, res) => {
   const notesText = cleanText(notes, 1000);
   const paymentOptionValue = cleanText(paymentOption, 20);
   const selectedServiceIds = Array.isArray(serviceIds) ? serviceIds.filter(Boolean) : [];
+  if (new Set(selectedServiceIds).size !== selectedServiceIds.length ||
+      Object.keys(serviceQuantities).some(id => !selectedServiceIds.includes(id))) {
+    return res.status(400).json({ message: 'Select each service once and set its quantity' });
+  }
+  const quantities = new Map(selectedServiceIds.map(id => [String(id), Number(serviceQuantities[id] ?? 1)]));
+  if ([...quantities.values()].some(quantity => !Number.isInteger(quantity) || quantity < 1 || quantity > 100)) {
+    return res.status(400).json({ message: 'Service quantities must be whole numbers from 1 to 100' });
+  }
   const { normalized: normalizedCustomServices, hasPartial } =
     normalizeCustomServices(customServices);
 
@@ -111,7 +126,7 @@ export const createBooking = async (req, res) => {
 
   if (hasPartial) {
     return res.status(400).json({
-      message: 'Please complete custom service name and price, or remove the incomplete row',
+      message: 'Please complete custom service name, price and a quantity from 1 to 100, or remove the incomplete row',
     });
   }
 
@@ -127,13 +142,15 @@ export const createBooking = async (req, res) => {
     const dbServiceIds = selectedServiceIds.filter((id) => !localServiceIds.has(String(id)));
 
     for (const svc of localServices) {
+      const quantity = quantities.get(String(svc._id));
       services.push({
         customServiceName: svc.name,
         customServicePrice: svc.price,
         price: svc.price,
         duration: svc.duration,
+        quantity,
       });
-      totalAmount += svc.price;
+      totalAmount += Math.round(svc.price * 100) * quantity / 100;
     }
 
     const dbServices = dbServiceIds.length
@@ -143,12 +160,14 @@ export const createBooking = async (req, res) => {
       return res.status(400).json({ message: 'One or more selected services are unavailable' });
     }
     for (const svc of dbServices) {
+      const quantity = quantities.get(String(svc._id));
       services.push({
         service: svc._id,
         price: svc.price,
         duration: svc.duration,
+        quantity,
       });
-      totalAmount += svc.price;
+      totalAmount += Math.round(svc.price * 100) * quantity / 100;
     }
   }
 
@@ -159,10 +178,13 @@ export const createBooking = async (req, res) => {
         customServicePrice: cs.price,
         price: cs.price,
         duration: cs.duration,
+        quantity: cs.quantity,
       });
-      totalAmount += cs.price;
+      totalAmount += Math.round(cs.price * 100) * cs.quantity / 100;
     }
   }
+
+  totalAmount = Math.round(totalAmount * 100) / 100;
 
   if (services.length === 0 && !customServiceRequestText) {
     return res.status(400).json({ message: 'Select at least one service' });

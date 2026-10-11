@@ -104,6 +104,7 @@ export default function MyAppointments() {
                   {appointment.services?.map((service, index) => (
                     <span key={index} className="bg-softpink-100 px-2 py-1 rounded-lg">
                       {service.service?.name || service.customServiceName}
+                      {' × '}{service.quantity || 1}
                     </span>
                   ))}
                 </div>

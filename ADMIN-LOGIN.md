@@ -19,8 +19,14 @@ Any old setup password saved locally is obsolete after this change. Update your 
 
 If you forget the password, use **Forgot Password?** on the login page. The recovery code goes to the account's current email address. Keep control of that inbox. Resetting the password also signs out old sessions.
 
+Customer recovery checks for a customer account; admin recovery checks for an admin account. If an account is missing (including an old customer that was never imported into the new database), the page asks the customer to register instead of claiming to send an OTP. Successful recovery sends a six-digit code valid for ten minutes; resend is available after one minute. Delivery errors leave the user on the email form. Request and reset rate limits are separate so resending a code does not consume the attempts needed to reset the password.
+
 # Advance and installment receipts
 
 Each payment screenshot waits for admin approval. Unapproved payments do not increase the verified paid amount. After approval, the customer's receipt shows the approved payments, total paid, and remaining balance. Later approved installments update that receipt. The customer opens **Appointments → View Receipt → Download / Print Receipt** to save it as a PDF using the browser's print dialog. A receipt is not automatically emailed.
 
 Example: for a ₹10,000 booking, an approved ₹2,000 advance gives a ₹2,000 paid / ₹8,000 due receipt. Approving a second ₹3,000 payment updates it to ₹5,000 paid / ₹5,000 due. Approving the last ₹5,000 updates it to ₹10,000 paid / ₹0 due.
+
+Choose a quantity from 1 to 100 for each selected package or custom service. The server calculates each line as the unit price × quantity, and displays quantities to the owner and on receipts. Old bookings keep quantity one. Changing category or search no longer clears the selected services.
+
+The booking payment step and the customer's Payments page offer **Pay with any UPI app**, **Open Google Pay**, **Copy UPI ID**, and **Save QR**. App links depend on the customer's installed app and browser; copying the ID or importing the saved QR remains available. Customers return to upload a screenshot, and an app launch never marks a payment as verified. The Payments page accepts further installments or the remaining balance for eligible bookings; a pending screenshot must be reviewed before another one can be submitted.

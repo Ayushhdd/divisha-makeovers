@@ -39,7 +39,12 @@ const serviceSlice = createSlice({
       const id = action.payload._id;
       const idx = state.selected.findIndex((s) => s._id === id);
       if (idx >= 0) state.selected.splice(idx, 1);
-      else state.selected.push(action.payload);
+      else state.selected.push({ ...action.payload, quantity: 1 });
+    },
+    setServiceQuantity: (state, action) => {
+      const service = state.selected.find(item => item._id === action.payload.id);
+      const quantity = Number(action.payload.quantity);
+      if (service && Number.isInteger(quantity) && quantity >= 1 && quantity <= 100) service.quantity = quantity;
     },
     clearSelected: (state) => {
       state.selected = [];
@@ -65,5 +70,5 @@ const serviceSlice = createSlice({
   },
 });
 
-export const { toggleService, clearSelected, setSelected } = serviceSlice.actions;
+export const { toggleService, clearSelected, setSelected, setServiceQuantity } = serviceSlice.actions;
 export default serviceSlice.reducer;

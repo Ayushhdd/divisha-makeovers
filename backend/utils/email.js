@@ -51,12 +51,15 @@ export const sendEmail = async ({ to, subject, html }) => {
     };
   }
   try {
-    await transporter.sendMail({
+    const delivery = await transporter.sendMail({
       from: process.env.EMAIL_FROM || process.env.SMTP_USER,
       to,
       subject,
       html,
     });
+    if (!delivery?.accepted?.length || delivery.rejected?.length) {
+      throw new Error('Recipient was not accepted by the email provider');
+    }
     return { success: true };
   } catch (error) {
     console.error('Email send error:', error.message);

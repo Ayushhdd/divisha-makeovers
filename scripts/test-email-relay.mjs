@@ -12,7 +12,7 @@ let sent;
 const original = nodemailer.createTransport;
 nodemailer.createTransport = () => ({
   verify: async () => { verified++; },
-  sendMail: async message => { sent = message; },
+  sendMail: async message => { sent = message; return { accepted: [message.to], rejected: [] }; },
 });
 const request = (payload, { timestamp = String(Date.now()), signature, unsigned = false } = {}) => {
   const body = JSON.stringify(payload);
@@ -34,6 +34,8 @@ try {
   assert.equal((await POST(request({ to: 'bad\r\nrecipient', subject: 'Test', html: 'Test' }))).status, 400);
   assert.equal((await POST(request({ to: 'customer@example.invalid', subject: 'Test', html: '<p>Test</p>' }))).status, 200);
   assert.equal(sent.to, 'customer@example.invalid');
+  nodemailer.createTransport = () => ({ sendMail: async () => ({ accepted: [], rejected: ['customer@example.invalid'] }) });
+  assert.equal((await POST(request({ to: 'customer@example.invalid', subject: 'Test', html: '<p>Test</p>' }))).status, 502);
   assert.equal((await POST(request({ html: 'x'.repeat(33000) }))).status, 413);
   console.log('PASS: email relay rejects unsigned, tampered, expired and oversized requests; SMTP verification sends no email; authenticated valid delivery works with a stub transport.');
 } finally {
