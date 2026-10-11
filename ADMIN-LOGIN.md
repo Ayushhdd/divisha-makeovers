@@ -1,5 +1,7 @@
 # Changing your admin login
 
+The main website's Dashboard is for customers. Customer and admin sessions are stored separately: customer sign-in accepts only customer accounts and never sends visitors to the admin portal. Bookmark the direct admin link below for owner access. Admin links are not included in the public navigation, and admin pages request exclusion from search indexing. The direct URL still requires an authenticated admin account.
+
 1. Open https://divishamakeovers.com/portal/admin/login and sign in with your current admin details. This page has no registration option; registration creates customer accounts only.
 2. In the admin sidebar, choose **Change Password**. The page is called **Change Admin Login**.
 3. Enter your current password. Leave **Also change my login email** unchecked to keep your existing email. If you check it, enter a private email address whose inbox you control.

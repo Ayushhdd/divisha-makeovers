@@ -1,6 +1,8 @@
-import { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { lazy, Suspense, useLayoutEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { activatePortal } from './store/authSlice';
+import { getPortalRole } from './utils/authSession';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 
 const LandingPage = lazy(() => import('./pages/LandingPage'));
@@ -31,12 +33,18 @@ function ProtectedRoute({ children, role }) {
   const { user, token } = useSelector((state) => state.auth);
   if (!token || !user) return <Navigate to={role === 'admin' ? '/admin/login' : '/divisha/login'} replace />;
   if (role && user.role !== role) {
-    return <Navigate to={user.role === 'admin' ? '/admin' : '/divisha/dashboard'} replace />;
+    return <Navigate to={role === 'admin' ? '/admin/login' : '/divisha/login'} replace />;
   }
   return children;
 }
 
 function App() {
+  const dispatch = useDispatch();
+  const location = useLocation();
+  const role = getPortalRole(location.pathname);
+  const activeRole = useSelector((state) => state.auth.portalRole);
+  useLayoutEffect(() => { dispatch(activatePortal(role)); }, [dispatch, role]);
+  if (activeRole !== role) return <LoadingSpinner fullScreen />;
   return (
     <Suspense fallback={<LoadingSpinner fullScreen />}>
       <Routes>

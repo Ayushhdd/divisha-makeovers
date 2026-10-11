@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getPortalRole, loadSession, clearSession } from '../utils/authSession';
 
 const API_URL = import.meta.env.VITE_API_URL || '/backend-api';
 const APP_BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -9,7 +10,8 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  config.portalRole = getPortalRole();
+  const { token } = loadSession(config.portalRole);
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
@@ -19,14 +21,13 @@ api.interceptors.response.use(
   (error) => {
     const authRequest = /^\/auth\/(login|register|forgot-password|reset-password)$/.test(error.config?.url || '');
     const sentToken = error.config?.headers?.Authorization;
-    const currentToken = localStorage.getItem('token');
-    const staleResponse = sentToken && currentToken && sentToken !== `Bearer ${currentToken}`;
+    const role = error.config?.portalRole || getPortalRole();
+    const { token: currentToken } = loadSession(role);
+    const staleResponse = sentToken && sentToken !== `Bearer ${currentToken}`;
     if (error.response?.status === 401 && !authRequest && !staleResponse) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      if (!window.location.pathname.includes('/login')) {
-        const adminPage = window.location.pathname.startsWith(`${APP_BASE}/admin`);
-        window.location.href = `${APP_BASE}${adminPage ? '/admin/login' : '/divisha/login'}`;
+      clearSession(role);
+      if (getPortalRole() === role && !window.location.pathname.includes('/login')) {
+        window.location.href = `${APP_BASE}${role === 'admin' ? '/admin/login' : '/divisha/login'}`;
       }
     }
     return Promise.reject(error);

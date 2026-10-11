@@ -66,7 +66,9 @@ export const login = async (req, res) => {
     return res.status(401).json({ message: 'Invalid email or password' });
   }
 
-  if (!(await user.matchPassword(password)) || (req.body.adminOnly === true && user.role !== 'admin')) {
+  if (!(await user.matchPassword(password)) ||
+      (req.body.adminOnly === true && user.role !== 'admin') ||
+      (req.body.customerOnly === true && user.role !== 'customer')) {
     return res.status(401).json({ message: 'Invalid email or password' });
   }
 

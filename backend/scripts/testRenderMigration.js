@@ -78,6 +78,14 @@ try {
   await request('/auth/login', '', {
     email: 'admin@example.invalid', password: 'TestPass12!', adminOnly: true,
   }, 'POST');
+  await request('/auth/login', '', {
+    email: 'admin@example.invalid', password: 'TestPass12!', customerOnly: true,
+  }, 'POST', 401);
+  const customerLogin = await request('/auth/login', '', {
+    email: 'customer@example.invalid', password: 'TestPass12!', customerOnly: true,
+  }, 'POST');
+  assert.equal(customerLogin.role, 'customer');
+  await request('/admin/dashboard', customerLogin.token, undefined, 'GET', 403);
   assert.ok(services.length);
   const screenshot = await sharp({ create: {
     width: 100, height: 100, channels: 3, background: '#336699',

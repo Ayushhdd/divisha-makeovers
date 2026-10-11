@@ -5,8 +5,8 @@ import Logo from '../components/Logo';
 export default function DivishaHome() {
   const { user, token } = useSelector((state) => state.auth);
 
-  if (token && user) {
-    return <Navigate to={user.role === 'admin' ? '/admin' : '/divisha/dashboard'} replace />;
+  if (token && user?.role === 'customer') {
+    return <Navigate to="/divisha/dashboard" replace />;
   }
 
   return (

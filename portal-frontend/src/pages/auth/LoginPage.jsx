@@ -19,7 +19,7 @@ export default function LoginPage({ admin = false }) {
     e.preventDefault();
     const result = await dispatch(loginUser({ ...form, adminOnly: admin }));
     if (loginUser.fulfilled.match(result)) {
-      navigate(result.payload.role === 'admin' ? '/admin' : '/divisha/dashboard');
+      navigate(admin ? '/admin' : '/divisha/dashboard');
     }
   };
 
@@ -30,8 +30,8 @@ export default function LoginPage({ admin = false }) {
       </div>
       <div className="flex-1 flex items-center justify-center px-4 pb-8">
         <div className="card w-full max-w-md animate-fade-in">
-          <h1 className="font-display text-2xl font-bold text-gray-800 mb-1">{admin ? 'Admin Sign In' : 'Welcome Back'}</h1>
-          <p className="text-gray-500 text-sm mb-6">{admin ? 'Sign in with your existing admin account' : 'Sign in to your account'}</p>
+          <h1 className="font-display text-2xl font-bold text-gray-800 mb-1">{admin ? 'Admin Sign In' : 'Customer Sign In'}</h1>
+          <p className="text-gray-500 text-sm mb-6">{admin ? 'Sign in with your existing admin account' : 'Sign in to book appointments and view your payments'}</p>
 
           {error && <Alert message={error} onClose={() => dispatch(clearError())} />}
           {message && <Alert type="success" message={message} onClose={() => setMessage('')} />}
