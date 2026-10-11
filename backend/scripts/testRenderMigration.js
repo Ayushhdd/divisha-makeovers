@@ -187,6 +187,26 @@ try {
   await start();
   await request('/auth/login', '', { email: 'admin@example.invalid', password: 'TestPass12!' }, 'POST', 401);
   await request('/admin/dashboard', updatedAdmin.token);
+  const { migrateAdminEmail } = await import('../utils/adminEmailMigration.js');
+  const beforeEmailCorrection = await users.findOne({ role: 'admin' });
+  const correction = {
+    legacyEmail: 'private-admin@example.invalid', targetEmail: 'owner@example.invalid',
+    migrationId: 'isolated-owner-email-correction',
+  };
+  await assert.rejects(migrateAdminEmail({ ...correction, targetEmail: 'customer@example.invalid' }), /conflicts/);
+  assert.equal((await users.findOne({ _id: beforeEmailCorrection._id })).email, correction.legacyEmail);
+  await migrateAdminEmail(correction);
+  const afterEmailCorrection = await users.findOne({ _id: beforeEmailCorrection._id });
+  assert.equal(afterEmailCorrection.password, beforeEmailCorrection.password, 'Email correction must preserve the exact existing password hash');
+  assert.equal(afterEmailCorrection.sessionVersion, beforeEmailCorrection.sessionVersion + 1);
+  await request('/admin/dashboard', updatedAdmin.token, undefined, 'GET', 401);
+  await request('/auth/login', '', { email: correction.legacyEmail, password: 'ResetPass9!' }, 'POST', 401);
+  updatedAdmin = await request('/auth/login', '', {
+    email: correction.targetEmail, password: 'ResetPass9!', adminOnly: true,
+  }, 'POST');
+  await request('/admin/dashboard', updatedAdmin.token);
+  await migrateAdminEmail(correction);
+  assert.equal((await users.findOne({ _id: beforeEmailCorrection._id })).sessionVersion, afterEmailCorrection.sessionVersion);
   const { ensureAdminAccount } = await import('../utils/adminBootstrap.js');
   const bootstrapAdmin = await users.findOne({ role: 'admin' });
   await users.deleteOne({ _id: bootstrapAdmin._id });

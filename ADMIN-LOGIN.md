@@ -11,6 +11,8 @@ The database stores a salted bcrypt hash of your password; it does not return th
 
 `ADMIN_EMAIL` and `ADMIN_PASSWORD` are bootstrap values used only when the database has no admin account. They never reset an existing admin. After initialization, you can remove those two bootstrap environment variables from Render. A new empty database cannot create an admin without explicitly supplied values. There is no built-in default login.
 
+The October 2026 deployment contains a one-time correction of the original placeholder admin email to the configured owner email. It updates only that admin's email, clears old recovery codes, and revokes old sessions while preserving the exact password hash. A completion marker prevents later deployments from overriding future email changes made in the portal. An existing account using the requested email blocks the correction instead of being deleted or granted admin access.
+
 Any old setup password saved locally is obsolete after this change. Update your own password manager and remove obsolete copies when you no longer need them. There is no need to send your new password to an agent or update it in Render.
 
 If you forget the password, use **Forgot Password?** on the login page. The recovery code goes to the account's current email address. Keep control of that inbox. Resetting the password also signs out old sessions.

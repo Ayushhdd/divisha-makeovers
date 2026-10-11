@@ -20,6 +20,7 @@ import paymentRoutes from './routes/paymentRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 
 import { ensureAdminAccount } from './utils/adminBootstrap.js';
+import { migrateAdminEmail } from './utils/adminEmailMigration.js';
 import Service from './models/Service.js';
 import AdminSettings from './models/AdminSettings.js';
 import { seedServiceCatalog } from './data/serviceCatalog.js';
@@ -62,6 +63,16 @@ const seedAdmin = async () => {
 };
 
 await seedAdmin();
+
+// Authorized one-time correction for the migrated production owner account.
+// The completion marker prevents future portal email changes being overwritten.
+if (process.env.NODE_ENV === 'production') {
+  await migrateAdminEmail({
+    legacyEmail: 'admin@divishamakeovers.com',
+    targetEmail: process.env.ADMIN_EMAIL,
+    migrationId: 'owner-login-email-correction-2026-10',
+  });
+}
 
 const app = express();
 // The hosting provider terminates HTTPS before forwarding the request.
