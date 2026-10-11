@@ -20,6 +20,8 @@ const nextConfig = {
     ];
   },
   images: {
+    // Display the original photo bytes; avoid lossy copies and old optimizer caches.
+    unoptimized: true,
     formats: ["image/avif", "image/webp"],
     deviceSizes: [360, 414, 640, 768, 1024, 1280, 1536, 1920, 2560, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],

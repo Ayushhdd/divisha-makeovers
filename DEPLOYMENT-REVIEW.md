@@ -6,10 +6,13 @@ and 21.77 MB of Functions Storage. It was not a MongoDB storage warning.
 
 ## What changed
 
-- Preserved all original photography under `assets/site-images/`; generate only
-  the 60 images used by the website into `public/`, at their existing URLs.
-  Image build input is 246.12 MB and generated output is 95.38 MB (61.2% less).
-  Total public output is approximately 95.85 MB, including the portal and icons.
+- Preserved all original photography under `assets/site-images/`; copy the
+  60 images used by the website into `public/`, at their existing URLs.
+  Per the owner's correction, all image resizing/recompression was rolled back.
+  Published photos contain exactly the original bytes (246.12 MB). Next.js image
+  optimization is disabled so pages display originals, avoiding lossy copies
+  and previously cached optimized images. Storage cleanup uses retention and
+  removal of unused assets/packages, without sacrificing photography quality.
 - Keep six unused photo alternatives in the source archive; omit them from
   deployments. Removed five unreferenced Next.js starter SVGs.
 - Removed the unused portal PWA build plugin. Retained the browser cleanup for
@@ -29,10 +32,10 @@ and 21.77 MB of Functions Storage. It was not a MongoDB storage warning.
 ## Verification
 
 - Full portal and Next production build passed.
-- All 60 generated photos decode; aspect ratios and PNG transparency remain.
+- All 60 published photos match the originals byte for byte.
   All 62 referenced image URLs exist, including the Next metadata icons.
 - Local HTTP checks passed for the homepage, four service pages, the legacy
-  engagement URL, both portal login URLs, and JPEG/PNG image optimization.
+  engagement URL, both portal login URLs, and original image URLs.
 - Scoped-session and UPI-link tests passed. Backend integration tests passed for
   quantities, three-part payments/receipts, OTP delivery/failure, role isolation,
   password hashing, session revocation, and restart-safe admin bootstrapping.
