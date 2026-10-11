@@ -26,7 +26,7 @@ for (const route of ['/', '/services/bridal', '/services/engagement-reception', 
   assert.equal(r.status, 200, route);
   const html = await r.text();
   assert.ok(html.includes('/_next/image?'), `${route}: responsive delivery must be enabled`);
-  assert.ok(html.includes('responsive2'), `${route}: fresh image versions must be used`);
+  assert.ok(html.includes('responsive3'), `${route}: fresh image versions must be used`);
   if (route === '/') assert.ok(html.includes('hero-mobile.webp'), 'Mobile hero source must be present');
 }
 const profiles = [
@@ -38,7 +38,7 @@ const profiles = [
   ['/nails/nails1.png',1080,92,'Nail detail'],
 ];
 for (const [src,width,quality,label] of profiles) {
-  const params = new URLSearchParams({url:`${src}?v=${versions[src].version}-responsive2`,w:String(width),q:String(quality)});
+  const params = new URLSearchParams({url:`${src}?v=${versions[src].version}-responsive3`,w:String(width),q:String(quality)});
   const r = await fetch(`${site}/_next/image?${params}`, {headers:{Accept:'image/webp'},signal:AbortSignal.timeout(60000)});
   assert.equal(r.status,200,label);
   assert.match(r.headers.get('content-type'),/image\/webp/,label);

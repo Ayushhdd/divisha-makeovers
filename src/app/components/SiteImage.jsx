@@ -5,7 +5,7 @@ import versions from "@/app/generated/image-versions.json";
 
 export function photoSource(src) {
   const version = typeof src === "string" && versions[src]?.version;
-  return version ? `${src}?v=${version}-responsive2` : src;
+  return version ? `${src}?v=${version}-responsive3` : src;
 }
 
 export function viewportPhotoSize(src, scale = 1) {

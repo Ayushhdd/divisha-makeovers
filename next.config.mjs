@@ -13,6 +13,15 @@ const nextConfig = {
   outputFileTracingExcludes: {
     '/*': ['./assets/site-images/**/*', './backend/**/*', './.local-logs/**/*', './portal-frontend/**/*'],
   },
+  async headers() {
+    // The image optimizer inherits the upstream photo's cache policy.
+    // Content hashes change the URL whenever a photo changes.
+    return Object.keys(imageVersions).map(source => ({
+      source,
+      has: [{ type: 'query', key: 'v', value: '[a-f0-9]{16}-responsive3' }],
+      headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+    }));
+  },
   async rewrites() {
     return [
       { source: "/backend-api/:path*", destination: `${backendApiUrl}/:path*` },
