@@ -72,6 +72,12 @@ try {
     address: { line1: 'Test', district: 'Test', state: 'Test', postalCode: '144001' },
   }, 'POST', 201);
   const services = await request('/services');
+  await request('/auth/login', '', {
+    email: 'customer@example.invalid', password: 'TestPass12!', adminOnly: true,
+  }, 'POST', 401);
+  await request('/auth/login', '', {
+    email: 'admin@example.invalid', password: 'TestPass12!', adminOnly: true,
+  }, 'POST');
   assert.ok(services.length);
   const screenshot = await sharp({ create: {
     width: 100, height: 100, channels: 3, background: '#336699',

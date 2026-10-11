@@ -17,11 +17,16 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const authRequest = /^\/auth\/(login|register|forgot-password|reset-password)$/.test(error.config?.url || '');
+    const sentToken = error.config?.headers?.Authorization;
+    const currentToken = localStorage.getItem('token');
+    const staleResponse = sentToken && currentToken && sentToken !== `Bearer ${currentToken}`;
+    if (error.response?.status === 401 && !authRequest && !staleResponse) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       if (!window.location.pathname.includes('/login')) {
-        window.location.href = `${APP_BASE}/divisha/login`;
+        const adminPage = window.location.pathname.startsWith(`${APP_BASE}/admin`);
+        window.location.href = `${APP_BASE}${adminPage ? '/admin/login' : '/divisha/login'}`;
       }
     }
     return Promise.reject(error);

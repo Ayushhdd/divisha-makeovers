@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
 import { logout } from '../../store/authSlice';
 import api from '../../api/axios';
 import Alert from '../../components/ui/Alert';
 
 export default function ChangePassword() {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
+  const [changeEmail, setChangeEmail] = useState(false);
   const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '', newEmail: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -24,13 +23,11 @@ export default function ChangePassword() {
       await api.put('/auth/change-password', {
         currentPassword: form.currentPassword,
         newPassword: form.newPassword,
-        ...(form.newEmail.trim() ? { newEmail: form.newEmail.trim() } : {}),
+        ...(changeEmail ? { newEmail: form.newEmail.trim() } : {}),
       });
       setForm({ currentPassword: '', newPassword: '', confirmPassword: '', newEmail: '' });
-      navigate('/divisha/login', { replace: true, state: {
-        message: 'Login updated. All sessions were signed out. Sign in with your new email and password.',
-      } });
       dispatch(logout());
+      window.location.replace(`${import.meta.env.BASE_URL.replace(/\/$/, '')}/admin/login?updated=1`);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to change password');
     }
@@ -50,11 +47,17 @@ export default function ChangePassword() {
             onChange={(e) => setForm({ ...form, currentPassword: e.target.value })} />
         </div>
         <div>
-          <label className="label" htmlFor="new-email">New Login Email (optional)</label>
-          <input id="new-email" type="email" autoComplete="username" className="input-field" value={form.newEmail}
-            onChange={(e) => setForm({ ...form, newEmail: e.target.value })} />
-          <p className="text-xs text-gray-500 mt-1">Leave blank to keep your current email. If you change it, use an inbox you control for password recovery.</p>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={changeEmail} onChange={(e) => setChangeEmail(e.target.checked)} />
+            Also change my login email
+          </label>
         </div>
+        {changeEmail && <div>
+          <label className="label" htmlFor="new-email">New Login Email</label>
+          <input id="new-email" type="email" required autoComplete="off" className="input-field" value={form.newEmail}
+            onChange={(e) => setForm({ ...form, newEmail: e.target.value })} />
+          <p className="text-xs text-gray-500 mt-1">Use an inbox you control for password recovery. Leave the checkbox off to keep your current email.</p>
+        </div>}
         <div>
           <label className="label" htmlFor="new-password">New Password</label>
           <input id="new-password" type="password" autoComplete="new-password" required minLength="11" maxLength="72" className="input-field" value={form.newPassword}

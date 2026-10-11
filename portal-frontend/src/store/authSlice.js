@@ -12,9 +12,12 @@ const loadUser = () => {
 
 export const loginUser = createAsyncThunk(
   'auth/login',
-  async ({ email, password, rememberMe }, { rejectWithValue }) => {
+  async ({ email, password, rememberMe, adminOnly = false }, { rejectWithValue }) => {
     try {
-      const { data } = await api.post('/auth/login', { email, password, rememberMe });
+      const { data } = await api.post('/auth/login', { email, password, rememberMe, adminOnly });
+      if (adminOnly && data.role !== 'admin') {
+        return rejectWithValue('An admin account is required.');
+      }
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data));
       return data;

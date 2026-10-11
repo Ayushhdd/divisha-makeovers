@@ -4,7 +4,8 @@ import api from '../../api/axios';
 import Alert from '../../components/ui/Alert';
 import Logo from '../../components/Logo';
 
-export default function ForgotPasswordPage() {
+export default function ForgotPasswordPage({ admin = false }) {
+  const loginPath = admin ? '/admin/login' : '/divisha/login';
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
@@ -72,7 +73,7 @@ export default function ForgotPasswordPage() {
               </div>
               <div>
                 <label className="label">New Password</label>
-                <input type="password" required minLength="6" className="input-field" value={newPassword}
+                <input type="password" required minLength={admin ? 11 : 6} autoComplete="new-password" className="input-field" value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)} />
               </div>
               <button type="submit" disabled={loading} className="btn-primary w-full">
@@ -84,11 +85,11 @@ export default function ForgotPasswordPage() {
           {step === 3 && (
             <div className="text-center">
               <Alert type="success" message={message} />
-              <Link to="/divisha/login" className="btn-primary inline-block mt-4">Go to Login</Link>
+              <Link to={loginPath} className="btn-primary inline-block mt-4">Go to Login</Link>
             </div>
           )}
 
-          <Link to="/divisha/login" className="block text-center text-sm text-rosegold-600 mt-4 hover:underline">
+          <Link to={loginPath} className="block text-center text-sm text-rosegold-600 mt-4 hover:underline">
             Back to Login
           </Link>
         </div>

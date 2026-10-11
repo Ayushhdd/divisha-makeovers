@@ -29,7 +29,7 @@ const ChangePassword = lazy(() => import('./pages/admin/ChangePassword'));
 
 function ProtectedRoute({ children, role }) {
   const { user, token } = useSelector((state) => state.auth);
-  if (!token || !user) return <Navigate to="/divisha/login" replace />;
+  if (!token || !user) return <Navigate to={role === 'admin' ? '/admin/login' : '/divisha/login'} replace />;
   if (role && user.role !== role) {
     return <Navigate to={user.role === 'admin' ? '/admin' : '/divisha/dashboard'} replace />;
   }
@@ -41,6 +41,8 @@ function App() {
     <Suspense fallback={<LoadingSpinner fullScreen />}>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/admin/login" element={<LoginPage admin />} />
+        <Route path="/admin/forgot-password" element={<ForgotPasswordPage admin />} />
 
         <Route path="/divisha">
           <Route index element={<DivishaHome />} />

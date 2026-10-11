@@ -1,8 +1,8 @@
 # Changing your admin login
 
-1. Open https://divishamakeovers.com/portal/divisha/login and sign in with your current admin details.
+1. Open https://divishamakeovers.com/portal/admin/login and sign in with your current admin details. This page has no registration option; registration creates customer accounts only.
 2. In the admin sidebar, choose **Change Password**. The page is called **Change Admin Login**.
-3. Enter your current password. If you want to change the login email, enter a private email address whose inbox you control. Leave that field empty to keep the existing email.
+3. Enter your current password. Leave **Also change my login email** unchecked to keep your existing email. If you check it, enter a private email address whose inbox you control.
 4. Choose your own unique password of at least 11 characters. A password manager can generate and store it. Do not send it in chat, put it in source code, or upload it to GitHub. Passwords cannot exceed 72 UTF-8 bytes because the database uses bcrypt.
 5. Enter the new password again and click **Update Login & Sign Out**.
 6. Sign in again with your chosen email and password. Every old login session has been invalidated. The old password no longer works.
