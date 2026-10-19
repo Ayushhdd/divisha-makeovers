@@ -107,9 +107,23 @@ app.use(
   })
 );
 
+// Render probes this endpoint every few seconds. Keep both GET and HEAD
+// outside the API quota so probes cannot exhaust it or restart a healthy app.
+app.get('/api/health', (req, res) => {
+  const ready = mongoose.connection.readyState === 1;
+  res.set('Cache-Control', 'no-store');
+  res.status(ready ? 200 : 503).json({
+    status: ready ? 'ok' : 'unavailable',
+    app: 'Divisha Makeovers API',
+    database: ready ? 'connected' : 'disconnected',
+  });
+});
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
   message: { message: 'Too many requests, please try again later' },
 });
 app.use('/api/', limiter);
@@ -122,15 +136,6 @@ const uploadDir = process.env.UPLOAD_DIR
   : path.join(__dirname, 'uploads');
 app.get('/uploads/:filename', serveStoredImage);
 app.use('/uploads', express.static(uploadDir));
-
-app.get('/api/health', (req, res) => {
-  const ready = mongoose.connection.readyState === 1;
-  res.status(ready ? 200 : 503).json({
-    status: ready ? 'ok' : 'unavailable',
-    app: 'Divisha Makeovers API',
-    database: ready ? 'connected' : 'disconnected',
-  });
-});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/services', serviceRoutes);

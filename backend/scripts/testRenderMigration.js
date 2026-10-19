@@ -79,6 +79,18 @@ try {
   await start();
   const health = await request('/health');
   assert.equal(health.database, 'connected');
+  // More probes than the complete API quota must consume none of it.
+  for (let probe = 0; probe < 220; probe++) {
+    const response = await fetch(`${base}/api/health`, { method: probe % 2 ? 'HEAD' : 'GET' });
+    assert.equal(response.status, 200, 'Render probes must never receive a rate-limit failure');
+    assert.equal(response.headers.get('ratelimit-remaining'), null);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+    await response.arrayBuffer();
+  }
+  const firstApiResponse = await fetch(`${base}/api/services`);
+  assert.equal(firstApiResponse.status, 200, 'Health probes must not block portal traffic');
+  assert.equal(firstApiResponse.headers.get('ratelimit-remaining'), '199');
+  await firstApiResponse.arrayBuffer();
   const admin = await request('/auth/login', '', {
     email: 'admin@example.invalid', password: 'TestPass12!',
   }, 'POST');
@@ -289,6 +301,21 @@ try {
   assert.equal((await users.findOne({ _id: beforeEmailCorrection._id })).sessionVersion, afterEmailCorrection.sessionVersion);
   const { ensureAdminAccount } = await import('../utils/adminBootstrap.js');
   const bootstrapAdmin = await users.findOne({ role: 'admin' });
+  // Keep abuse protection for real API traffic, including after quota exhaustion.
+  let limitedResponse;
+  for (let attempt = 0; attempt < 201; attempt++) {
+    limitedResponse = await fetch(`${base}/api/services`);
+    await limitedResponse.arrayBuffer();
+    if (limitedResponse.status === 429) break;
+  }
+  assert.equal(limitedResponse.status, 429);
+  assert.ok(Number(limitedResponse.headers.get('retry-after')) > 0);
+  for (const method of ['GET', 'HEAD']) {
+    const response = await fetch(`${base}/api/health`, { method });
+    assert.equal(response.status, 200, 'An exhausted API quota must not make Render restart the server');
+    await response.arrayBuffer();
+  }
+  console.log('PASS: repeated GET/HEAD health probes do not consume the API quota; API abuse still returns 429/Retry-After; health remains available after quota exhaustion.');
   await users.deleteOne({ _id: bootstrapAdmin._id });
   const savedEmail = process.env.ADMIN_EMAIL;
   const savedPassword = process.env.ADMIN_PASSWORD;

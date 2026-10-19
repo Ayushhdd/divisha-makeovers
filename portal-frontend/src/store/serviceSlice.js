@@ -3,12 +3,12 @@ import api from '../api/axios';
 
 export const fetchServices = createAsyncThunk(
   'services/fetch',
-  async (params = {}, { rejectWithValue }) => {
+  async (params = {}, { rejectWithValue, signal }) => {
     try {
-      const { data } = await api.get('/services', { params });
+      const { data } = await api.get('/services', { params, signal });
       return data;
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message);
+      return rejectWithValue(err.response?.data?.message || 'Could not load services. Please try again.');
     }
   }
 );
@@ -33,6 +33,7 @@ const serviceSlice = createSlice({
     loading: false,
     error: null,
     selected: [],
+    requestId: null,
   },
   reducers: {
     toggleService: (state, action) => {
@@ -55,14 +56,22 @@ const serviceSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchServices.pending, (state) => { state.loading = true; })
+      .addCase(fetchServices.pending, (state, action) => {
+        state.loading = true;
+        state.error = null;
+        state.requestId = action.meta.requestId;
+      })
       .addCase(fetchServices.fulfilled, (state, action) => {
+        if (state.requestId !== action.meta.requestId) return;
         state.loading = false;
+        state.requestId = null;
         state.list = action.payload;
       })
       .addCase(fetchServices.rejected, (state, action) => {
+        if (state.requestId !== action.meta.requestId) return;
         state.loading = false;
-        state.error = action.payload;
+        state.requestId = null;
+        state.error = action.meta.aborted ? null : action.payload || 'Could not load services. Please try again.';
       })
       .addCase(fetchAllServices.fulfilled, (state, action) => {
         state.all = action.payload;

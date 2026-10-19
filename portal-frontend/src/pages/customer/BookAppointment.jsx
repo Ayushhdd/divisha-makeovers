@@ -104,7 +104,7 @@ const getCompleteCustomServices = (services) =>
 export default function BookAppointment() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { list, loading, selected } = useSelector((state) => state.services);
+  const { list, loading, selected, error: servicesError } = useSelector((state) => state.services);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [step, setStep] = useState(1);
@@ -128,10 +128,18 @@ export default function BookAppointment() {
   const activeCategory = BOOKING_CATEGORIES.find((item) => item.value === category) || BOOKING_CATEGORIES[0];
 
   useEffect(() => {
-    dispatch(fetchServices({ search, category }));
+    let request;
+    const timer = window.setTimeout(() => {
+      request = dispatch(fetchServices({ search, category }));
+    }, search ? 300 : 0);
+    return () => {
+      window.clearTimeout(timer);
+      request?.abort();
+    };
   }, [dispatch, search, category]);
   useEffect(() => {
-    api.get('/admin/settings/public').then(({ data }) => setSettings(data));
+    api.get('/admin/settings/public').then(({ data }) => setSettings(data))
+      .catch((err) => setError(err.response?.data?.message || 'Could not load payment settings. Please refresh before paying.'));
     return () => dispatch(clearSelected());
   }, [dispatch]);
 
@@ -329,6 +337,10 @@ export default function BookAppointment() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 pb-10 animate-fade-in sm:px-6">
+      {servicesError && <div className="space-y-2" role="alert">
+        <Alert message={servicesError} />
+        <button type="button" className="btn-secondary" onClick={() => dispatch(fetchServices({ search, category }))}>Retry loading services</button>
+      </div>}
       <div className="relative overflow-hidden rounded-2xl border border-white/70 bg-white/85 p-5 shadow-[0_24px_80px_rgba(92,55,61,0.12)] sm:p-7">
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#b76e79] via-[#e7c59d] to-[#416d64]" />
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">

@@ -13,11 +13,18 @@ export default function LoginPage({ admin = false }) {
     (admin && new URLSearchParams(location.search).get('updated') === '1'
       ? 'Your login was updated. Sign in with your current admin email and new password.' : ''));
   const { loading, error } = useSelector((state) => state.auth);
-  const [form, setForm] = useState({ email: '', password: '', rememberMe: false });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const result = await dispatch(loginUser({ ...form, adminOnly: admin }));
+    if (loading) return;
+    // Safari/password managers can autofill without firing React onChange.
+    const fields = new FormData(e.currentTarget);
+    const result = await dispatch(loginUser({
+      email: String(fields.get('email') || '').trim(),
+      password: String(fields.get('password') || ''),
+      rememberMe: fields.get('rememberMe') === 'on',
+      adminOnly: admin,
+    }));
     if (loginUser.fulfilled.match(result)) {
       navigate(admin ? '/admin' : '/divisha/dashboard');
     }
@@ -41,31 +48,28 @@ export default function LoginPage({ admin = false }) {
               <label className="label" htmlFor="login-email">Email</label>
               <input
                 id="login-email"
+                name="email"
                 autoComplete="username"
                 type="email"
                 required
                 className="input-field"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
               />
             </div>
             <div>
               <label className="label" htmlFor="login-password">Password</label>
               <input
                 id="login-password"
+                name="password"
                 autoComplete="current-password"
                 type="password"
                 required
                 className="input-field"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
               />
             </div>
             <label className="flex items-center gap-2 text-sm text-gray-600">
               <input
                 type="checkbox"
-                checked={form.rememberMe}
-                onChange={(e) => setForm({ ...form, rememberMe: e.target.checked })}
+                name="rememberMe"
                 className="rounded border-gray-300 text-rosegold-500"
               />
               Remember me

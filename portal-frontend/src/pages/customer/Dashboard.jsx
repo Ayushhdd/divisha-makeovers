@@ -7,20 +7,32 @@ import api from '../../api/axios';
 import { useState } from 'react';
 import { formatCurrency, formatDate, STATUS_COLORS, STATUS_LABELS } from '../../utils/helpers';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import Alert from '../../components/ui/Alert';
 
 export default function CustomerDashboard() {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
-  const { list, loading } = useSelector((state) => state.services);
+  const { list, loading, error: servicesError } = useSelector((state) => state.services);
   const [upcoming, setUpcoming] = useState([]);
+  const [appointmentsError, setAppointmentsError] = useState('');
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     dispatch(fetchServices());
-    api.get('/appointments/my?type=upcoming').then(({ data }) => setUpcoming(data.slice(0, 3)));
-  }, [dispatch]);
+    let active = true;
+    setAppointmentsError('');
+    api.get('/appointments/my?type=upcoming')
+      .then(({ data }) => { if (active) setUpcoming(data.slice(0, 3)); })
+      .catch((err) => { if (active) setAppointmentsError(err.response?.data?.message || 'Could not load upcoming appointments.'); });
+    return () => { active = false; };
+  }, [dispatch, retry]);
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {(servicesError || appointmentsError) && <div className="space-y-2" role="alert">
+        <Alert message={servicesError || appointmentsError} />
+        <button type="button" className="btn-secondary" onClick={() => setRetry(value => value + 1)}>Retry loading</button>
+      </div>}
       <div>
         <h1 className="font-display text-2xl font-bold text-gray-800">
           Hello, {user?.fullName?.split(' ')[0]}! ✨
